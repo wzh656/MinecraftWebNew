@@ -68,8 +68,15 @@ export class Renderer {
     this.camera.position.set(x, y, z);
   }
 
-  setCameraRotation(x: number, y: number, z: number): void {
-    this.camera.rotation.set(x, y, z);
+  setCameraRotation(x: number, y: number, z?: number): void {
+    // Always use YXZ order for consistent camera rotation
+    this.camera.rotation.order = 'YXZ';
+    if (z !== undefined) {
+      this.camera.rotation.set(x, y, z);
+    } else {
+      this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, x));
+      this.camera.rotation.y = y;
+    }
   }
 
   rotateCamera(yawDelta: number, pitchDelta: number): void {
@@ -113,6 +120,13 @@ export class Renderer {
       x: this.camera.position.x,
       y: this.camera.position.y,
       z: this.camera.position.z,
+    };
+  }
+
+  getCameraRotation(): { x: number; y: number } {
+    return {
+      x: this.camera.rotation.x,
+      y: this.camera.rotation.y,
     };
   }
 

@@ -22,7 +22,12 @@ export class World {
   }
 
   update(playerX: number, playerZ: number): void {
-    this.chunkManager.updateVisibleChunks(playerX, playerZ);
+    const unloadedChunks = this.chunkManager.updateVisibleChunks(playerX, playerZ);
+
+    // Remove meshes for unloaded chunks
+    for (const key of unloadedChunks) {
+      this.meshBuilder.removeChunkMesh(key, this.scene);
+    }
 
     for (const chunk of this.chunkManager.getVisibleChunks()) {
       if (chunk.needsUpdate) {

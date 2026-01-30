@@ -1,5 +1,5 @@
 export const CHUNK_SIZE = 16;
-export const CHUNK_HEIGHT = 16;
+export const CHUNK_HEIGHT = 256;
 export const BLOCK_SIZE = 1;
 
 export const RENDER_DISTANCE = 8;

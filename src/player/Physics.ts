@@ -40,8 +40,11 @@ export class Physics {
     let prevZ = Math.floor(originZ);
 
     // Skip the starting block - we shouldn't detect collision with the block we're inside
-    // Start from a small offset along the ray direction
-    let startOffset = stepSize;
+    // Use a larger initial offset to ensure we're outside the starting block
+    // This prevents "mining through" issues when player is close to blocks
+    let startOffset = 0.5; // Minimum distance to move before checking blocks
+    let foundStart = false;
+
     while (startOffset < maxDistance) {
       const t = startOffset;
       const x = originX + ndx * t;
@@ -57,11 +60,14 @@ export class Physics {
         prevX = bx;
         prevY = by;
         prevZ = bz;
+        foundStart = true;
         break;
       }
 
       startOffset += stepSize;
     }
+
+    if (!foundStart) return null;
 
     for (let i = Math.ceil(startOffset / stepSize); i < steps; i++) {
       const t = i * stepSize;

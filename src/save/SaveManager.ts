@@ -15,6 +15,7 @@ interface WorldMetadata {
   createdAt: number;
   lastPlayed: number;
   playerPosition?: { x: number; y: number; z: number };
+  playerRotation?: { x: number; y: number };
 }
 
 export class SaveManager {
@@ -115,7 +116,10 @@ export class SaveManager {
     });
   }
 
-  async savePlayerPosition(position: { x: number; y: number; z: number }): Promise<void> {
+  async savePlayerPosition(
+    position: { x: number; y: number; z: number },
+    rotation?: { x: number; y: number }
+  ): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
     const metadata: WorldMetadata = {
@@ -123,6 +127,7 @@ export class SaveManager {
       createdAt: Date.now(),
       lastPlayed: Date.now(),
       playerPosition: position,
+      playerRotation: rotation,
     };
 
     // Get existing metadata first to preserve createdAt
@@ -144,6 +149,11 @@ export class SaveManager {
   async loadPlayerPosition(): Promise<{ x: number; y: number; z: number } | null> {
     const metadata = await this.getWorldMetadata(this.currentWorld);
     return metadata?.playerPosition ?? null;
+  }
+
+  async loadWorldMetadata(worldName?: string): Promise<WorldMetadata | null> {
+    const name = worldName ?? this.currentWorld;
+    return this.getWorldMetadata(name);
   }
 
   private async getWorldMetadata(worldName: string): Promise<WorldMetadata | null> {

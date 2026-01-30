@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(pnpm exec tsc --noEmit)"
+      "Bash(pnpm exec tsc --noEmit)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm build)"
     ]
   }
 }

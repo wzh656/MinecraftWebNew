@@ -1,7 +1,7 @@
 import { Chunk } from './Chunk';
 import { TerrainGenerator } from './TerrainGenerator';
 import { SaveManager } from '../save/SaveManager';
-import { CHUNK_SIZE, RENDER_DISTANCE } from '../utils/Constants';
+import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE } from '../utils/Constants';
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
@@ -23,14 +23,36 @@ export class ChunkManager {
     const key = this.getChunkKey(cx, cz);
     let chunk = this.chunks.get(key);
     if (!chunk) {
-      chunk = this.generator.generateChunk(cx, cz);
+      // Create a placeholder chunk and trigger async load
+      chunk = new Chunk(cx, cz);
       this.chunks.set(key, chunk);
+      this.loadChunkAsync(cx, cz, chunk);
     }
     return chunk;
   }
 
+  private async loadChunkAsync(cx: number, cz: number, placeholder: Chunk): Promise<void> {
+    const saved = await this.loadChunkFromSave(cx, cz);
+    if (saved) {
+      // Copy saved data to placeholder - only copy available data
+      // This handles migration from older saves with smaller chunk height
+      const copyLength = Math.min(saved.data.length, placeholder.data.length);
+      placeholder.data.set(saved.data.subarray(0, copyLength));
+      // Fill remaining space with AIR if saved data is smaller
+      if (saved.data.length < placeholder.data.length) {
+        placeholder.data.fill(0, saved.data.length);
+      }
+      placeholder.needsUpdate = true;
+    } else {
+      // Generate new terrain if no save exists
+      const generated = this.generator.generateChunk(cx, cz);
+      placeholder.data.set(generated.data);
+      placeholder.needsUpdate = true;
+    }
+  }
+
   setBlock(x: number, y: number, z: number, type: number): void {
-    if (y < 0 || y >= 16) return;
+    if (y < 0 || y >= CHUNK_HEIGHT) return;
 
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
@@ -64,7 +86,7 @@ export class ChunkManager {
 
   getBlock(x: number, y: number, z: number): number {
     if (y < 0) return 1;
-    if (y >= 16) return 0;
+    if (y >= CHUNK_HEIGHT) return 0;
 
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
@@ -81,11 +103,12 @@ export class ChunkManager {
     return block !== 0;
   }
 
-  updateVisibleChunks(playerX: number, playerZ: number): void {
+  updateVisibleChunks(playerX: number, playerZ: number): string[] {
     const pcx = Math.floor(playerX / CHUNK_SIZE);
     const pcz = Math.floor(playerZ / CHUNK_SIZE);
 
-    this.visibleChunks.clear();
+    const newVisibleChunks = new Set<string>();
+    const unloadedChunks: string[] = [];
 
     for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
       for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
@@ -94,10 +117,36 @@ export class ChunkManager {
         const dist = Math.sqrt(x * x + z * z);
         if (dist <= RENDER_DISTANCE) {
           this.ensureChunk(cx, cz);
-          this.visibleChunks.add(this.getChunkKey(cx, cz));
+          newVisibleChunks.add(this.getChunkKey(cx, cz));
         }
       }
     }
+
+    // Find chunks that are no longer visible and unload them
+    for (const key of this.visibleChunks) {
+      if (!newVisibleChunks.has(key)) {
+        this.unloadChunk(key);
+        unloadedChunks.push(key);
+      }
+    }
+
+    this.visibleChunks = newVisibleChunks;
+    return unloadedChunks;
+  }
+
+  private unloadChunk(key: string): void {
+    // Save chunk before unloading if it has pending changes
+    if (this.pendingSaves.has(key)) {
+      const chunk = this.chunks.get(key);
+      if (chunk && this.saveManager) {
+        this.saveManager.saveChunk(chunk.x, chunk.z, chunk.data).catch((e) => {
+          console.error('Failed to save chunk before unload:', chunk.x, chunk.z, e);
+        });
+      }
+      this.pendingSaves.delete(key);
+    }
+    // Remove chunk from memory
+    this.chunks.delete(key);
   }
 
   getVisibleChunks(): IterableIterator<Chunk> {
@@ -191,13 +240,27 @@ export class ChunkManager {
     await this.flushPendingSaves();
   }
 
+  clear(): void {
+    this.chunks.clear();
+    this.visibleChunks.clear();
+  }
+
   async loadPlayerPosition(): Promise<{ x: number; y: number; z: number } | null> {
     if (!this.saveManager) return null;
     return this.saveManager.loadPlayerPosition();
   }
 
-  async savePlayerPosition(position: { x: number; y: number; z: number }): Promise<void> {
+  async loadPlayerRotation(): Promise<{ x: number; y: number } | null> {
+    if (!this.saveManager) return null;
+    const metadata = await this.saveManager.loadWorldMetadata();
+    return metadata?.playerRotation ?? null;
+  }
+
+  async savePlayerPosition(
+    position: { x: number; y: number; z: number },
+    rotation?: { x: number; y: number }
+  ): Promise<void> {
     if (!this.saveManager) return;
-    await this.saveManager.savePlayerPosition(position);
+    await this.saveManager.savePlayerPosition(position, rotation);
   }
 }

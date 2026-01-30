@@ -27,6 +27,8 @@ export class MeshBuilder {
       this.material = new MeshBasicMaterial({
         map: texture,
         side: DoubleSide,
+        transparent: true,
+        alphaTest: 0.1,
       });
     }
   }
@@ -177,6 +179,15 @@ export class MeshBuilder {
         return { textureTop: 0, textureBottom: 2, textureSide: 1 };
       default:
         return { textureTop: 5, textureBottom: 5, textureSide: 5 };
+    }
+  }
+
+  removeChunkMesh(key: string, scene: Scene): void {
+    const mesh = this.chunkMeshes.get(key);
+    if (mesh) {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+      this.chunkMeshes.delete(key);
     }
   }
 

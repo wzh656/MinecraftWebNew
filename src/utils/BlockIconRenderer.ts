@@ -1,6 +1,6 @@
 import {
   Scene,
-  PerspectiveCamera,
+  OrthographicCamera,
   WebGLRenderer,
   Mesh,
   BufferGeometry,
@@ -14,7 +14,7 @@ import { TextureLoader } from './TextureLoader';
 export class BlockIconRenderer {
   private canvas: HTMLCanvasElement;
   private scene: Scene;
-  private camera: PerspectiveCamera;
+  private camera: OrthographicCamera;
   private renderer: WebGLRenderer;
   private textureLoader: TextureLoader;
   private material: MeshBasicMaterial | null = null;
@@ -30,8 +30,16 @@ export class BlockIconRenderer {
     // Setup scene
     this.scene = new Scene();
 
-    // Setup camera with isometric-like angle
-    this.camera = new PerspectiveCamera(45, 1, 0.1, 100);
+    // Setup orthographic camera for isometric view
+    const frustumSize = 2.5;
+    this.camera = new OrthographicCamera(
+      -frustumSize / 2,
+      frustumSize / 2,
+      frustumSize / 2,
+      -frustumSize / 2,
+      0.1,
+      100
+    );
     this.camera.position.set(2, 2, 2);
     this.camera.lookAt(0, 0, 0);
 

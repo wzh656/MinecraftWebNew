@@ -35,8 +35,11 @@ export class InputHandler {
       console.log('Mouse down event:', e.button);
       if (e.button === 0) this.mouse.leftDown = true;
       if (e.button === 2) this.mouse.rightDown = true;
-      e.preventDefault();
-      return false;
+      // Only prevent default when pointer is locked (in game), not for UI interactions
+      if (this.locked) {
+        e.preventDefault();
+        return false;
+      }
     }, { passive: false });
 
     document.addEventListener('mouseup', (e) => {
@@ -89,7 +92,9 @@ export class InputHandler {
   }
 
   lockPointer(): void {
-    document.body.requestPointerLock();
+    document.body.requestPointerLock().catch((err) => {
+      console.log('Pointer lock request failed:', err);
+    });
   }
 
   unlockPointer(): void {
