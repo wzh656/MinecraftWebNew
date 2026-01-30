@@ -37,6 +37,7 @@ export class Game {
   private saveManager: SaveManager | null = null;
   private lastSaveTime = 0;
   private readonly saveInterval = SAVE_INTERVAL_PLAYER;
+  private sprintActive = false;
 
   private blockTypes = [
     BlockType.STONE,
@@ -81,8 +82,10 @@ export class Game {
   }
 
   async initialize(worldName?: string): Promise<void> {
+    this.updateLoadingStatus('Initializing world...', 0);
     await this.world.initialize();
 
+    this.updateLoadingStatus('Loading save data...', 20);
     // Initialize save manager
     this.saveManager = new SaveManager();
     await this.saveManager.init();
@@ -105,6 +108,7 @@ export class Game {
       this.renderer.setCameraRotation(savedRotation.x, savedRotation.y);
     }
 
+    this.updateLoadingStatus('Generating block icons...', 40);
     // Initialize block icon renderer and generate icons
     this.blockIconRenderer = new BlockIconRenderer(this.world.getTextureLoader());
     this.blockIconRenderer.initialize();
@@ -125,16 +129,81 @@ export class Game {
       this.player.setPosition(x, y, z);
     });
 
-    const loading = document.getElementById('loading');
-    if (loading) {
-      loading.classList.add('hidden');
-    }
+    // Load initial chunks with progress tracking
+    const playerPos = savedPosition ?? { x: PLAYER_INITIAL_X, y: PLAYER_INITIAL_Y, z: PLAYER_INITIAL_Z };
+    await this.loadInitialChunks(playerPos.x, playerPos.z);
 
-    this.world.update(PLAYER_INITIAL_X, PLAYER_INITIAL_Z);
+    this.updateLoadingStatus('Starting game...', 100);
+
+    // Loading screen is managed by main.ts for initial load
+    // World loading overlay would be handled separately
+
     this.ui.setHotbarSelection(0);
 
-    // Start game loop immediately
+    // Note: Fog is now handled by the custom shader in MeshBuilder
+
+    // Start game loop
     this.start();
+  }
+
+  private updateLoadingStatus(status: string, progress: number): void {
+    const statusEl = document.getElementById('loading-status');
+    const progressBar = document.getElementById('loading-progress-bar');
+    if (statusEl) {
+      statusEl.textContent = status;
+    }
+    if (progressBar) {
+      progressBar.style.width = `${progress}%`;
+    }
+  }
+
+  private async loadInitialChunks(playerX: number, playerZ: number): Promise<void> {
+    this.updateLoadingStatus('Loading chunks...', 60);
+
+    // Trigger chunk loading
+    this.world.update(playerX, playerZ);
+
+    // Wait for all visible chunks to be fully loaded
+    const chunkManager = this.world.getChunkManager();
+    const maxWaitTime = 30000; // 30 seconds timeout
+    const startTime = performance.now();
+
+    while (performance.now() - startTime < maxWaitTime) {
+      const visibleChunks = Array.from(chunkManager.getVisibleChunks());
+      const totalChunks = visibleChunks.length;
+
+      if (totalChunks === 0) {
+        await this.delay(100);
+        continue;
+      }
+
+      // Check how many chunks have been fully loaded (have data)
+      const loadedChunks = visibleChunks.filter(chunk => {
+        // A chunk is considered loaded if it has been initialized with data
+        // We check if any non-air block exists by sampling
+        for (let i = 0; i < chunk.data.length; i++) {
+          if (chunk.data[i] !== 0) return true;
+        }
+        return false;
+      }).length;
+
+      const progress = 60 + Math.floor((loadedChunks / totalChunks) * 35);
+      this.updateLoadingStatus(`Loading chunks... (${loadedChunks}/${totalChunks})`, progress);
+
+      if (loadedChunks >= totalChunks) {
+        // All chunks loaded, give a moment for mesh generation
+        await this.delay(500);
+        break;
+      }
+
+      await this.delay(100);
+      // Continue updating world to trigger async loading
+      this.world.update(playerX, playerZ);
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   start(): void {
@@ -194,6 +263,8 @@ export class Game {
       position: pos,
       rotation: { x: rotation.x, y: rotation.y },
       target: raycastHit,
+      flying: this.player.isFlying(),
+      sprinting: this.player.isSprinting(),
     });
 
     // Auto-save player position and rotation
@@ -219,14 +290,38 @@ export class Game {
 
     // Don't process game input when paused
     if (this.pauseMenuVisible) {
+      // Clear all input and movement state when paused
+      this.input.clearAllKeys();
+      this.sprintActive = false;
+      this.player.deactivateSprint();
       return;
     }
 
-    if (this.input.isKeyDown('KeyW')) {
+    // Track if W was pressed this frame for sprint detection
+    const wPressed = this.input.isKeyDown('KeyW');
+
+    // Handle double-tap for flight toggle (double Space)
+    if (this.input.isDoubleSpaceTap()) {
+      this.player.toggleFlight();
+    }
+
+    // Sprint: double-tap W to activate, only active while moving forward
+    if (this.input.isDoubleWTap()) {
+      this.sprintActive = true;
+    }
+
+    // Check movement keys
+    if (wPressed) {
+      // Sprint is active ONLY when holding forward
+      if (this.sprintActive) {
+        this.player.activateSprint();
+      }
       this.player.moveForward(1);
     }
     if (this.input.isKeyDown('KeyS')) {
       this.player.moveForward(-1);
+      this.player.deactivateSprint();
+      this.sprintActive = false;
     }
     if (this.input.isKeyDown('KeyA')) {
       this.player.moveRight(-1);
@@ -234,8 +329,33 @@ export class Game {
     if (this.input.isKeyDown('KeyD')) {
       this.player.moveRight(1);
     }
-    if (this.input.isKeyDown('Space')) {
-      this.player.jump();
+
+    // If not moving forward, deactivate sprint
+    if (!wPressed) {
+      this.sprintActive = false;
+      this.player.deactivateSprint();
+    }
+
+    // Handle flight movement
+    let verticalInput = false;
+    if (this.player.isFlying()) {
+      if (this.input.isKeyDown('Space')) {
+        this.player.ascend();
+        verticalInput = true;
+      }
+      if (this.input.isKeyDown('ShiftLeft') || this.input.isKeyDown('ShiftRight')) {
+        this.player.descend();
+        verticalInput = true;
+      }
+      // No vertical input = hover in place
+      if (!verticalInput) {
+        this.player.hover();
+      }
+    } else {
+      // Normal jump when not flying
+      if (this.input.isKeyDown('Space')) {
+        this.player.jump();
+      }
     }
 
     const mouseDelta = this.input.getMouseDelta();

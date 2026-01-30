@@ -3,33 +3,58 @@ import {
   Mesh,
   BufferGeometry,
   BufferAttribute,
-  MeshBasicMaterial,
-  DoubleSide,
+  ShaderMaterial,
 } from 'three';
 import { Chunk } from './Chunk';
 import { ChunkManager } from './ChunkManager';
 import { TextureLoader } from '../utils/TextureLoader';
+import {
+  ChunkShaderMaterial,
+  ChunkFadeManager,
+} from '../utils/ChunkShaderMaterial';
 import { BlockType } from './BlockType';
 import { CHUNK_SIZE, CHUNK_HEIGHT } from '../utils/Constants';
 
 export class MeshBuilder {
   private chunkMeshes = new Map<string, Mesh>();
   private textureLoader: TextureLoader;
-  private material: MeshBasicMaterial | undefined;
+  private shaderMaterial: ChunkShaderMaterial | null = null;
+  private fadeManager: ChunkFadeManager;
 
   constructor(textureLoader: TextureLoader) {
     this.textureLoader = textureLoader;
+    this.fadeManager = new ChunkFadeManager();
   }
 
   initialize(): void {
     const texture = this.textureLoader.getTexture();
     if (texture) {
-      this.material = new MeshBasicMaterial({
-        map: texture,
-        side: DoubleSide,
-        transparent: true,
-        alphaTest: 0.1,
-      });
+      this.shaderMaterial = new ChunkShaderMaterial(texture);
+    }
+  }
+
+  /**
+   * 获取淡入动画管理器
+   */
+  getFadeManager(): ChunkFadeManager {
+    return this.fadeManager;
+  }
+
+  /**
+   * 设置雾距离参数
+   */
+  setFogDistance(near: number, far: number): void {
+    if (this.shaderMaterial) {
+      this.shaderMaterial.setFogDistance(near, far);
+    }
+  }
+
+  /**
+   * 设置雾颜色
+   */
+  setFogColor(color: number): void {
+    if (this.shaderMaterial) {
+      this.shaderMaterial.setFogColor(color);
     }
   }
 
@@ -37,7 +62,7 @@ export class MeshBuilder {
     return `${cx},${cz}`;
   }
 
-  updateChunkMesh(chunk: Chunk, scene: Scene, chunkManager: ChunkManager): void {
+  updateChunkMesh(chunk: Chunk, scene: Scene, chunkManager: ChunkManager): Mesh | null {
     const key = this.getChunkKey(chunk.x, chunk.z);
 
     const oldMesh = this.chunkMeshes.get(key);
@@ -48,10 +73,23 @@ export class MeshBuilder {
     }
 
     const geometry = this.buildChunkGeometry(chunk, chunkManager);
-    if (!geometry) return;
+    if (!geometry) return null;
 
-    if (!this.material) return;
-    const mesh = new Mesh(geometry, this.material);
+    if (!this.shaderMaterial) return null;
+    // 每个区块使用独立的材质实例，以便控制淡入动画
+    const material = this.shaderMaterial.getMaterial().clone();
+
+    // 检查是否需要淡入动画
+    const isNewChunk = !this.fadeManager.hasCompleted(key) && !this.fadeManager.isFading(key);
+    if (isNewChunk) {
+      this.fadeManager.startFadeIn(key, 0);
+    }
+
+    // 设置当前透明度
+    const opacity = this.fadeManager.getOpacity(key);
+    material.uniforms.chunkOpacity.value = opacity;
+
+    const mesh = new Mesh(geometry, material);
     mesh.position.set(
       chunk.x * CHUNK_SIZE,
       0,
@@ -60,6 +98,54 @@ export class MeshBuilder {
 
     scene.add(mesh);
     this.chunkMeshes.set(key, mesh);
+    return mesh;
+  }
+
+  /**
+   * 更新所有进行中的淡入动画
+   * 返回已完成淡入的区块keys
+   */
+  updateFadeAnimations(): string[] {
+    const completed = this.fadeManager.update();
+
+    // 更新所有进行淡入的mesh的透明度
+    for (const key of this.chunkMeshes.keys()) {
+      if (!this.fadeManager.isFading(key)) continue;
+
+      const opacity = this.fadeManager.getOpacity(key);
+      const mesh = this.chunkMeshes.get(key);
+      if (mesh && !Array.isArray(mesh.material)) {
+        const shaderMat = mesh.material as ShaderMaterial;
+        if (shaderMat.uniforms) {
+          shaderMat.uniforms.chunkOpacity.value = opacity;
+        }
+      }
+    }
+
+    return completed;
+  }
+
+  /**
+   * 获取指定区块的Mesh
+   */
+  getMesh(key: string): Mesh | undefined {
+    return this.chunkMeshes.get(key);
+  }
+
+  /**
+   * 批量设置雾距离参数（更新所有已有mesh的uniforms）
+   */
+  updateAllFogDistance(near: number, far: number): void {
+    this.setFogDistance(near, far);
+    for (const mesh of this.chunkMeshes.values()) {
+      if (!Array.isArray(mesh.material)) {
+        const shaderMat = mesh.material as ShaderMaterial;
+        if (shaderMat.uniforms) {
+          shaderMat.uniforms.fogNear.value = near;
+          shaderMat.uniforms.fogFar.value = far;
+        }
+      }
+    }
   }
 
   private buildChunkGeometry(
@@ -194,9 +280,14 @@ export class MeshBuilder {
   dispose(): void {
     for (const mesh of this.chunkMeshes.values()) {
       mesh.geometry.dispose();
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach(m => m.dispose());
+      } else {
+        mesh.material.dispose();
+      }
     }
     this.chunkMeshes.clear();
-    this.material?.dispose();
+    this.shaderMaterial?.dispose();
   }
 
   private isFaceOccluded(
@@ -235,16 +326,16 @@ export class MeshBuilder {
 }
 
 const FACE_VERTICES = [
-  // Top (y+)
+  // Top (y+) - CCW when looking from above
   [0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1],
-  // Bottom (y-)
+  // Bottom (y-) - CCW when looking from below
   [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
-  // Front (z+)
-  [0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
-  // Back (z-)
-  [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0],
-  // Left (x-)
-  [0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0],
-  // Right (x+)
-  [1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1],
+  // Front (z+) - CCW: 左下, 右下, 右上, 左上
+  [1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1],
+  // Back (z-) - CCW: 右下, 左下, 左上, 右上
+  [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0],
+  // Left (x-) - CCW: 前下, 后下, 后上, 前上
+  [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1],
+  // Right (x+) - CCW: 后下, 前下, 前上, 后上
+  [1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0],
 ];

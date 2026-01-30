@@ -513,6 +513,8 @@ export class UIManager {
     position: { x: number; y: number; z: number };
     rotation: { x: number; y: number };
     target: { x: number; y: number; z: number; face: number } | null;
+    flying?: boolean;
+    sprinting?: boolean;
   }): void {
     if (this.debugInfo) {
       const yaw = (info.rotation.y * 180 / Math.PI) % 360;
@@ -521,8 +523,13 @@ export class UIManager {
         ? `${info.target.x}, ${info.target.y}, ${info.target.z} (face: ${info.target.face})`
         : 'none';
 
+      const statusStr = [];
+      if (info.flying) statusStr.push('Flying');
+      if (info.sprinting) statusStr.push('Sprinting');
+      const statusText = statusStr.length > 0 ? ` [${statusStr.join(', ')}]` : '';
+
       this.debugInfo.innerHTML = `
-        <div>FPS: ${info.fps}</div>
+        <div>FPS: ${info.fps}${statusText}</div>
         <div>Pos: ${info.position.x.toFixed(2)}, ${info.position.y.toFixed(2)}, ${info.position.z.toFixed(2)}</div>
         <div>Yaw: ${yaw.toFixed(1)}°, Pitch: ${pitch.toFixed(1)}°</div>
         <div>Target: ${targetStr}</div>

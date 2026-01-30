@@ -42,11 +42,9 @@ async function init(): Promise<void> {
   await updateWorldList();
   ui.showMainMenu();
 
-  // Hide loading screen
-  const loading = document.getElementById('loading');
-  if (loading) {
-    loading.classList.add('hidden');
-  }
+  // Hide loading screen after main menu is ready to display
+  const loadingElem = document.getElementById('loading');
+  loadingElem?.classList.add('hidden');
 
   window.addEventListener('beforeunload', () => {
     currentGame?.dispose();
@@ -62,18 +60,27 @@ async function updateWorldList(): Promise<void> {
 async function startGame(worldName: string): Promise<void> {
   if (!currentGame) return;
 
+  // Show loading screen before starting world initialization
+  const loadingElem = document.getElementById('loading');
+  loadingElem?.classList.remove('hidden');
+
   const ui = currentGame.getUIManager();
   ui.hideMainMenu();
-  ui.show();
 
   try {
     await currentGame.initialize(worldName);
+
+    ui.show();
+
     // Don't start game loop yet - show pause menu first
     // Player needs to click "Resume Game" to lock pointer and start
     currentGame.showInitialPauseMenu();
   } catch (error) {
     console.error('Failed to start game:', error);
     returnToMainMenu();
+  }finally{
+    // Hide loading screen on error
+    loadingElem?.classList.add('hidden');
   }
 }
 

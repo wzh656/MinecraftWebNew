@@ -60,7 +60,10 @@ export class BlockIconRenderer {
       this.material = new MeshBasicMaterial({
         map: texture,
         side: DoubleSide,
-        transparent: true,
+        // 禁用透明混合，防止颜色泛白
+        // 使用alphaTest进行裁剪，保持边缘锐利
+        transparent: false,
+        alphaTest: 0.5,
       });
     }
   }

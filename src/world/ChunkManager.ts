@@ -1,12 +1,13 @@
 import { Chunk } from './Chunk';
 import { TerrainGenerator } from './TerrainGenerator';
 import { SaveManager } from '../save/SaveManager';
-import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE } from '../utils/Constants';
+import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE, CACHE_DISTANCE } from '../utils/Constants';
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
   private generator = new TerrainGenerator();
   private visibleChunks = new Set<string>();
+  private cachedChunks = new Set<string>(); // Chunks within cache distance but outside render distance
   private saveManager: SaveManager | null = null;
   private pendingSaves = new Set<string>();
   private saveTimeout: number | null = null;
@@ -103,35 +104,69 @@ export class ChunkManager {
     return block !== 0;
   }
 
-  updateVisibleChunks(playerX: number, playerZ: number): string[] {
+  updateVisibleChunks(playerX: number, playerZ: number): {
+    unloaded: string[];
+    cached: string[];
+    uncached: string[];
+  } {
     const pcx = Math.floor(playerX / CHUNK_SIZE);
     const pcz = Math.floor(playerZ / CHUNK_SIZE);
 
     const newVisibleChunks = new Set<string>();
+    const newCachedChunks = new Set<string>();
     const unloadedChunks: string[] = [];
+    const cachedChunks: string[] = [];
+    const uncachedChunks: string[] = [];
 
-    for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
-      for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+    // First pass: determine which chunks should be visible or cached
+    for (let x = -CACHE_DISTANCE; x <= CACHE_DISTANCE; x++) {
+      for (let z = -CACHE_DISTANCE; z <= CACHE_DISTANCE; z++) {
         const cx = pcx + x;
         const cz = pcz + z;
         const dist = Math.sqrt(x * x + z * z);
+        const key = this.getChunkKey(cx, cz);
+
         if (dist <= RENDER_DISTANCE) {
+          // Render distance: fully loaded and visible
           this.ensureChunk(cx, cz);
-          newVisibleChunks.add(this.getChunkKey(cx, cz));
+          newVisibleChunks.add(key);
+        } else if (dist <= CACHE_DISTANCE) {
+          // Cache distance: data kept in memory but not rendered
+          this.ensureChunk(cx, cz);
+          newCachedChunks.add(key);
         }
       }
     }
 
-    // Find chunks that are no longer visible and unload them
+    // Find chunks that are no longer visible or cached
     for (const key of this.visibleChunks) {
       if (!newVisibleChunks.has(key)) {
+        if (newCachedChunks.has(key)) {
+          // Moving from visible to cached - remove mesh but keep data
+          cachedChunks.push(key);
+        } else {
+          // Moving from visible to unloaded
+          this.unloadChunk(key);
+          unloadedChunks.push(key);
+        }
+      }
+    }
+
+    // Find chunks that are no longer cached
+    for (const key of this.cachedChunks) {
+      if (!newVisibleChunks.has(key) && !newCachedChunks.has(key)) {
         this.unloadChunk(key);
         unloadedChunks.push(key);
+      } else if (newVisibleChunks.has(key)) {
+        // Moving from cached back to visible
+        uncachedChunks.push(key);
       }
     }
 
     this.visibleChunks = newVisibleChunks;
-    return unloadedChunks;
+    this.cachedChunks = newCachedChunks;
+
+    return { unloaded: unloadedChunks, cached: cachedChunks, uncached: uncachedChunks };
   }
 
   private unloadChunk(key: string): void {
@@ -156,6 +191,15 @@ export class ChunkManager {
       if (chunk) visible.push(chunk);
     }
     return visible[Symbol.iterator]();
+  }
+
+  getCachedChunks(): IterableIterator<Chunk> {
+    const cached: Chunk[] = [];
+    for (const key of this.cachedChunks) {
+      const chunk = this.chunks.get(key);
+      if (chunk) cached.push(chunk);
+    }
+    return cached[Symbol.iterator]();
   }
 
   getAllChunks(): IterableIterator<Chunk> {
@@ -243,6 +287,7 @@ export class ChunkManager {
   clear(): void {
     this.chunks.clear();
     this.visibleChunks.clear();
+    this.cachedChunks.clear();
   }
 
   async loadPlayerPosition(): Promise<{ x: number; y: number; z: number } | null> {

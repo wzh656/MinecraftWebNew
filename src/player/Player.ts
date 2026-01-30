@@ -3,6 +3,8 @@ import { ChunkManager } from '../world/ChunkManager';
 import {
   PLAYER_HEIGHT,
   PLAYER_SPEED,
+  PLAYER_SPRINT_SPEED,
+  PLAYER_FLIGHT_SPEED,
   GRAVITY,
   PLAYER_JUMP_SPEED,
   PLAYER_WIDTH,
@@ -25,21 +27,83 @@ export class Player {
   private width = PLAYER_WIDTH;
   private depth = PLAYER_DEPTH;
 
+  // Flight and sprint mode
+  private flying = false;
+  private sprinting = false;
+
   constructor(renderer: Renderer, chunkManager: ChunkManager) {
     this.renderer = renderer;
     this.chunkManager = chunkManager;
   }
 
   update(delta: number): void {
-    this.applyGravity(delta);
+    if (!this.flying) {
+      this.applyGravity(delta);
+    }
     this.applyMovement(delta);
     this.updateCamera();
   }
 
+  // Flight mode
+  isFlying(): boolean {
+    return this.flying;
+  }
+
+  toggleFlight(): void {
+    this.flying = !this.flying;
+    if (this.flying) {
+      // Reset vertical velocity when entering flight mode
+      this.velocity.y = 0;
+    }
+  }
+
+  // Sprint mode - activated while holding forward, not a toggle
+  isSprinting(): boolean {
+    return this.sprinting;
+  }
+
+  activateSprint(): void {
+    this.sprinting = true;
+  }
+
+  deactivateSprint(): void {
+    this.sprinting = false;
+  }
+
+  // Ascend/descend while flying - returns true if vertical velocity was changed
+  ascend(): boolean {
+    if (this.flying) {
+      this.velocity.y = PLAYER_FLIGHT_SPEED;
+      return true;
+    }
+    return false;
+  }
+
+  descend(): boolean {
+    if (this.flying) {
+      this.velocity.y = -PLAYER_FLIGHT_SPEED;
+      return true;
+    }
+    return false;
+  }
+
+  // Stop vertical movement (hover in place)
+  hover(): void {
+    if (this.flying) {
+      this.velocity.y = 0;
+    }
+  }
+
+  // Deactivate flying mode
+  exitFlightMode(): void {
+    this.flying = false;
+  }
+
   moveForward(amount: number): void {
     const forward = this.renderer.getHorizontalForwardVector();
-    this.velocity.x = forward.x * amount * this.speed;
-    this.velocity.z = forward.z * amount * this.speed;
+    const currentSpeed = this.flying ? PLAYER_FLIGHT_SPEED : (this.sprinting ? PLAYER_SPRINT_SPEED : this.speed);
+    this.velocity.x = forward.x * amount * currentSpeed;
+    this.velocity.z = forward.z * amount * currentSpeed;
   }
 
   moveRight(amount: number): void {

@@ -1,8 +1,10 @@
 import { Chunk } from './Chunk';
 import { BlockType } from './BlockType';
 import { CHUNK_SIZE, CHUNK_HEIGHT } from '../utils/Constants';
+import { createNoise2D } from 'simplex-noise';
 
 export class TerrainGenerator {
+  private treeNoise = createNoise2D();
   generateChunk(cx: number, cz: number): Chunk {
     const chunk = new Chunk(cx, cz);
 
@@ -27,9 +29,15 @@ export class TerrainGenerator {
           chunk.setBlock(x, y, z, blockType);
         }
 
-        // Occasionally add a tree or feature
-        if (groundHeight < CHUNK_HEIGHT - 5 && x % 7 === 3 && z % 7 === 3) {
-          this.addTree(chunk, x, groundHeight + 1, z);
+        // Generate tree using Simplex Noise for random but smooth distribution
+        // Trees only generate on grass with enough space above and at specific noise threshold
+        if (groundHeight < CHUNK_HEIGHT - 5) {
+          const treeNoiseValue = this.treeNoise(worldX * 0.1, worldZ * 0.1);
+          // Noise value between -1 and 1, trees spawn where value > 0.75 (about 12% of area)
+          // Lower frequency (0.1) makes clusters larger, higher threshold = fewer trees
+          if (treeNoiseValue > 0.75) {
+            this.addTree(chunk, x, groundHeight + 1, z);
+          }
         }
       }
     }

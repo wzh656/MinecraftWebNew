@@ -3,10 +3,16 @@ export const CHUNK_HEIGHT = 256;
 export const BLOCK_SIZE = 1;
 
 export const RENDER_DISTANCE = 8;
+export const CACHE_DISTANCE = 12; // Chunks within this distance are kept in memory but not rendered
 export const GRAVITY = -18;
 export const PLAYER_HEIGHT = 1.8;
 export const PLAYER_SPEED = 4.3;
+export const PLAYER_SPRINT_SPEED = 6.5; // Sprint is 1.5x normal speed
+export const PLAYER_FLIGHT_SPEED = 8.0; // Flight speed
 export const PLAYER_JUMP_SPEED = 7.5;
+
+// Double-tap detection for flight and sprint (milliseconds)
+export const DOUBLE_TAP_WINDOW = 300;
 
 // Player dimensions and physics
 export const PLAYER_WIDTH = 0.6;

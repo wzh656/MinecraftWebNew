@@ -1,8 +1,16 @@
+import { DOUBLE_TAP_WINDOW } from '../utils/Constants';
+
 export class InputHandler {
   private keys = new Map<string, boolean>();
   private mouse = { x: 0, y: 0, dx: 0, dy: 0, leftDown: false, rightDown: false };
   private locked = false;
   private wheelDelta = 0;
+
+  // Double-tap detection
+  private lastSpaceTapTime = 0;
+  private lastWTapTime = 0;
+  private doubleSpaceDetected = false;
+  private doubleWDetected = false;
 
   constructor() {
     this.setupEventListeners();
@@ -11,6 +19,29 @@ export class InputHandler {
   private setupEventListeners(): void {
     document.addEventListener('keydown', (e) => {
       this.keys.set(e.code, true);
+
+      // Ignore keyboard auto-repeat events for double-tap detection
+      if (e.repeat) {
+        return;
+      }
+
+      // Double-tap detection for Space (flight toggle)
+      if (e.code === 'Space') {
+        const now = performance.now();
+        if (now - this.lastSpaceTapTime < DOUBLE_TAP_WINDOW) {
+          this.doubleSpaceDetected = true;
+        }
+        this.lastSpaceTapTime = now;
+      }
+
+      // Double-tap detection for W (sprint toggle)
+      if (e.code === 'KeyW') {
+        const now = performance.now();
+        if (now - this.lastWTapTime < DOUBLE_TAP_WINDOW) {
+          this.doubleWDetected = true;
+        }
+        this.lastWTapTime = now;
+      }
     });
 
     document.addEventListener('keyup', (e) => {
@@ -109,5 +140,34 @@ export class InputHandler {
     const delta = this.wheelDelta;
     this.wheelDelta = 0;
     return delta;
+  }
+
+  // Double-tap detection methods
+  isDoubleSpaceTap(): boolean {
+    if (this.doubleSpaceDetected) {
+      this.doubleSpaceDetected = false;
+      return true;
+    }
+    return false;
+  }
+
+  isDoubleWTap(): boolean {
+    if (this.doubleWDetected) {
+      this.doubleWDetected = false;
+      return true;
+    }
+    return false;
+  }
+
+  // Clear all key states - called when pausing
+  clearAllKeys(): void {
+    this.keys.clear();
+    this.mouse.leftDown = false;
+    this.mouse.rightDown = false;
+    this.mouse.dx = 0;
+    this.mouse.dy = 0;
+    this.wheelDelta = 0;
+    this.doubleSpaceDetected = false;
+    this.doubleWDetected = false;
   }
 }

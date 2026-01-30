@@ -5,7 +5,8 @@
       "Bash(pnpm exec tsc --noEmit)",
       "Bash(pnpm lint)",
       "Bash(pnpm build)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(pnpm add)"
     ]
   }
 }

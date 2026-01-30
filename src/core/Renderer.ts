@@ -20,11 +20,16 @@ export class Renderer {
     this.renderer = new WebGLRenderer(params);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(new Color(0x87ceeb));
+    // 天空/背景色：中性蓝灰，与雾色一致
+    this.renderer.setClearColor(new Color(0x9cb5c4));
     this.renderer.shadowMap.enabled = false;
 
     this.scene = new Scene();
-    this.scene.background = new Color(0x87ceeb);
+    // 背景色 - 中性蓝灰，与雾色保持一致
+    this.scene.background = new Color(0x9cb5c4);
+
+    // 注意：雾效现在通过ShaderMaterial单独在区块上实现
+    // 不使用全局Fog，以便实现逐区块的淡入效果
 
     this.camera = new PerspectiveCamera(
       75,
