@@ -7,9 +7,9 @@ import {
   BufferAttribute,
   MeshBasicMaterial,
   DoubleSide,
-} from 'three';
-import { BlockType } from '../world/BlockType';
-import { TextureLoader } from './TextureLoader';
+} from "three";
+import { BlockType } from "../world/BlockType";
+import { TextureLoader } from "./TextureLoader";
 
 export class BlockIconRenderer {
   private canvas: HTMLCanvasElement;
@@ -23,7 +23,7 @@ export class BlockIconRenderer {
     this.textureLoader = textureLoader;
 
     // Create canvas for rendering
-    this.canvas = document.createElement('canvas');
+    this.canvas = document.createElement("canvas");
     this.canvas.width = 48;
     this.canvas.height = 48;
 
@@ -39,7 +39,7 @@ export class BlockIconRenderer {
       frustumSize / 2,
       -frustumSize / 2,
       0.1,
-      100
+      100,
     );
     this.camera.position.set(1.8, 1.8, 1.8);
     this.camera.lookAt(0, 0, 0);
@@ -70,7 +70,7 @@ export class BlockIconRenderer {
 
   renderBlockIcon(blockType: BlockType): string {
     if (blockType === BlockType.AIR || !this.material) {
-      return '';
+      return "";
     }
 
     // Clear scene
@@ -88,7 +88,7 @@ export class BlockIconRenderer {
     this.renderer.render(this.scene, this.camera);
 
     // Return data URL
-    return this.canvas.toDataURL('image/png');
+    return this.canvas.toDataURL("image/png");
   }
 
   private createBlockGeometry(blockType: BlockType): BufferGeometry {
@@ -115,7 +115,7 @@ export class BlockIconRenderer {
         vertexCount + 1,
         vertexCount,
         vertexCount + 3,
-        vertexCount + 2
+        vertexCount + 2,
       );
 
       vertexCount += 4;
@@ -130,8 +130,11 @@ export class BlockIconRenderer {
     addFace(5, props.textureSide);
 
     const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
-    geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+    geometry.setAttribute(
+      "position",
+      new BufferAttribute(new Float32Array(positions), 3),
+    );
+    geometry.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 

@@ -1,4 +1,4 @@
-import { Texture, NearestFilter, RepeatWrapping } from 'three';
+import { Texture, NearestFilter, RepeatWrapping } from "three";
 
 export class TextureLoader {
   private textureAtlas: Texture | null = null;
@@ -10,7 +10,7 @@ export class TextureLoader {
   async load(url: string): Promise<Texture> {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.crossOrigin = 'anonymous';
+      image.crossOrigin = "anonymous";
       image.onload = () => {
         this.textureAtlas = new Texture(image);
         this.textureAtlas.magFilter = NearestFilter;
@@ -29,7 +29,12 @@ export class TextureLoader {
     return this.textureAtlas;
   }
 
-  getUVs(textureIndex: number): { u1: number; v1: number; u2: number; v2: number } {
+  getUVs(textureIndex: number): {
+    u1: number;
+    v1: number;
+    u2: number;
+    v2: number;
+  } {
     if (textureIndex < 0) {
       return { u1: 0, v1: 0, u2: 0, v2: 0 };
     }

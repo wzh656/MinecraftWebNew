@@ -1,4 +1,4 @@
-import { BoxGeometry } from 'three';
+import { BoxGeometry } from "three";
 
 export class GeometryCache {
   private static instance: GeometryCache;

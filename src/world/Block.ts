@@ -1,4 +1,9 @@
-import { BlockType, isSolid, isTransparent, getTextureIndex } from './BlockType';
+import {
+  BlockType,
+  isSolid,
+  isTransparent,
+  getTextureIndex,
+} from "./BlockType";
 
 export class Block {
   constructor(public readonly type: BlockType) {}

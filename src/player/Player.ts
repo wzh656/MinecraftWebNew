@@ -1,5 +1,5 @@
-import { Renderer } from '../core/Renderer';
-import { ChunkManager } from '../world/ChunkManager';
+import { Renderer } from "../core/Renderer";
+import { ChunkManager } from "../world/ChunkManager";
 import {
   PLAYER_HEIGHT,
   PLAYER_SPEED,
@@ -10,7 +10,7 @@ import {
   PLAYER_WIDTH,
   PLAYER_DEPTH,
   WORLD_MIN_Y,
-} from '../utils/Constants';
+} from "../utils/Constants";
 
 export class Player {
   private renderer: Renderer;
@@ -22,6 +22,8 @@ export class Player {
 
   private height = PLAYER_HEIGHT;
   private speed = PLAYER_SPEED;
+  private sprintSpeed = PLAYER_SPRINT_SPEED;
+  private flightSpeed = PLAYER_FLIGHT_SPEED;
   private jumpSpeed = PLAYER_JUMP_SPEED;
 
   private width = PLAYER_WIDTH;
@@ -52,9 +54,20 @@ export class Player {
   toggleFlight(): void {
     this.flying = !this.flying;
     if (this.flying) {
-      // Reset vertical velocity when entering flight mode
       this.velocity.y = 0;
     }
+  }
+
+  updateSpeeds(speeds: {
+    normal: number;
+    sprint: number;
+    flight: number;
+    jump: number;
+  }): void {
+    this.speed = speeds.normal;
+    this.sprintSpeed = speeds.sprint;
+    this.flightSpeed = speeds.flight;
+    this.jumpSpeed = speeds.jump;
   }
 
   // Sprint mode - activated while holding forward, not a toggle
@@ -73,7 +86,7 @@ export class Player {
   // Ascend/descend while flying - returns true if vertical velocity was changed
   ascend(): boolean {
     if (this.flying) {
-      this.velocity.y = PLAYER_FLIGHT_SPEED;
+      this.velocity.y = this.flightSpeed;
       return true;
     }
     return false;
@@ -81,7 +94,7 @@ export class Player {
 
   descend(): boolean {
     if (this.flying) {
-      this.velocity.y = -PLAYER_FLIGHT_SPEED;
+      this.velocity.y = -this.flightSpeed;
       return true;
     }
     return false;
@@ -101,7 +114,11 @@ export class Player {
 
   moveForward(amount: number): void {
     const forward = this.renderer.getHorizontalForwardVector();
-    const currentSpeed = this.flying ? PLAYER_FLIGHT_SPEED : (this.sprinting ? PLAYER_SPRINT_SPEED : this.speed);
+    const currentSpeed = this.flying
+      ? this.flightSpeed
+      : this.sprinting
+        ? this.sprintSpeed
+        : this.speed;
     this.velocity.x = forward.x * amount * currentSpeed;
     this.velocity.z = forward.z * amount * currentSpeed;
   }
@@ -142,7 +159,10 @@ export class Player {
       // This handles the case where player is buried under blocks
       let adjustedY = Math.ceil(y); // Start from the next integer Y
       const maxSearchHeight = adjustedY + 10; // Search up to 10 blocks up
-      while (adjustedY < maxSearchHeight && this.checkCollision(x, adjustedY, z)) {
+      while (
+        adjustedY < maxSearchHeight &&
+        this.checkCollision(x, adjustedY, z)
+      ) {
         adjustedY += 1.0; // Move up by 1 block until not colliding
       }
       this.position.y = adjustedY;

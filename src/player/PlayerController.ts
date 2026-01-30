@@ -1,4 +1,4 @@
-import { Camera } from 'three';
+import { Camera } from "three";
 
 export class PlayerController {
   private keys = new Map<string, boolean>();
@@ -17,15 +17,15 @@ export class PlayerController {
   }
 
   private setupInputs(): void {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       this.keys.set(e.code, true);
     });
 
-    document.addEventListener('keyup', (e) => {
+    document.addEventListener("keyup", (e) => {
       this.keys.set(e.code, false);
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener("mousemove", (e) => {
       if (document.pointerLockElement === document.body) {
         this.yaw -= e.movementX * this.mouseSensitivity;
         this.pitch -= e.movementY * this.mouseSensitivity;
@@ -34,13 +34,13 @@ export class PlayerController {
       }
     });
 
-    document.addEventListener('click', () => {
+    document.addEventListener("click", () => {
       document.body.requestPointerLock();
     });
   }
 
   private updateCameraRotation(): void {
-    this.camera.rotation.order = 'YXZ';
+    this.camera.rotation.order = "YXZ";
     this.camera.rotation.y = this.yaw;
     this.camera.rotation.x = this.pitch;
   }
@@ -52,19 +52,19 @@ export class PlayerController {
     let moveX = 0;
     let moveZ = 0;
 
-    if (this.keys.get('KeyW')) {
+    if (this.keys.get("KeyW")) {
       moveX += forward.x;
       moveZ += forward.z;
     }
-    if (this.keys.get('KeyS')) {
+    if (this.keys.get("KeyS")) {
       moveX -= forward.x;
       moveZ -= forward.z;
     }
-    if (this.keys.get('KeyA')) {
+    if (this.keys.get("KeyA")) {
       moveX += right.x;
       moveZ += right.z;
     }
-    if (this.keys.get('KeyD')) {
+    if (this.keys.get("KeyD")) {
       moveX -= right.x;
       moveZ -= right.z;
     }
@@ -78,7 +78,7 @@ export class PlayerController {
     this.velocity.x = moveX * this.movementSpeed;
     this.velocity.z = moveZ * this.movementSpeed;
 
-    if (this.keys.get('Space') && this.onGround) {
+    if (this.keys.get("Space") && this.onGround) {
       this.velocity.y = 8.5;
       this.onGround = false;
     }

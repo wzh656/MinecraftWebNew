@@ -1,53 +1,93 @@
-import { Game } from './core/Game';
-import { SaveManager } from './save/SaveManager';
+import { Game } from "./core/Game";
+import { SaveManager } from "./save/SaveManager";
+import { audioManager } from "./utils/AudioManager";
 
 let currentGame: Game | null = null;
 let saveManager: SaveManager | null = null;
 
 async function init(): Promise<void> {
-  const container = document.getElementById('game-container');
+  const container = document.getElementById("game-container");
   if (!container) {
-    throw new Error('Game container not found');
+    throw new Error("Game container not found");
   }
 
   // Initialize save manager for main menu
   saveManager = new SaveManager();
   await saveManager.init();
 
-  // Create a temporary game instance just for UI (we'll create a proper one when world is selected)
+  // Create game instance
   currentGame = new Game(container);
 
-  // Setup UI callbacks for main menu
+  // Setup UI callbacks
+  setupUICallbacks();
+
+  // Show main menu
+  const ui = currentGame.getUIManager();
+  ui.showMainMenu();
+
+  // Hide loading screen
+  const loadingElem = document.getElementById("loading");
+  loadingElem?.classList.add("hidden");
+
+  const startAudioOnInteraction = () => {
+    audioManager.start();
+    document.removeEventListener("click", startAudioOnInteraction);
+    document.removeEventListener("keydown", startAudioOnInteraction);
+  };
+  document.addEventListener("click", startAudioOnInteraction);
+  document.addEventListener("keydown", startAudioOnInteraction);
+
+  window.addEventListener("beforeunload", () => {
+    currentGame?.dispose();
+  });
+}
+
+function setupUICallbacks(): void {
+  if (!currentGame) return;
+
   const ui = currentGame.getUIManager();
   ui.setCallbacks({
+    // 主页
+    onSinglePlayer: async () => {
+      await updateWorldList();
+    },
+    onOptions: () => {
+      // 显示选项菜单
+    },
+    onExit: () => {
+      // 退出游戏 (刷新页面或关闭标签)
+      window.location.reload();
+    },
+
+    // 存档列表
+    onWorldSelect: async (worldName: string) => {
+      await startGame(worldName);
+    },
+    onWorldCreate: async (worldName: string, seed: string) => {
+      await createNewWorld(worldName, seed);
+    },
+    onWorldDelete: async (worldName: string) => {
+      await saveManager?.deleteWorld(worldName);
+      await updateWorldList();
+    },
+    onWorldEdit: (worldName: string) => {
+      console.log("Edit world:", worldName);
+      // TODO: 实现世界编辑（重命名等）
+    },
+
+    // 暂停菜单
     onResume: () => {
       currentGame?.setPauseMenuVisible(false);
     },
     onReturnToMain: () => {
       returnToMainMenu();
     },
-    onWorldSelect: async (worldName: string) => {
-      await startGame(worldName);
-    },
-    onWorldCreate: async (worldName: string) => {
-      await startGame(worldName);
-    },
-    onWorldDelete: async (worldName: string) => {
-      await saveManager?.deleteWorld(worldName);
-      await updateWorldList();
-    },
-  });
 
-  // Show main menu and load world list
-  await updateWorldList();
-  ui.showMainMenu();
-
-  // Hide loading screen after main menu is ready to display
-  const loadingElem = document.getElementById('loading');
-  loadingElem?.classList.add('hidden');
-
-  window.addEventListener('beforeunload', () => {
-    currentGame?.dispose();
+    // 设置变更
+    onSettingsChange: (newSettings) => {
+      // 应用设置变更
+      currentGame?.applySettings?.(newSettings);
+    },
   });
 }
 
@@ -57,69 +97,67 @@ async function updateWorldList(): Promise<void> {
   currentGame?.getUIManager().updateWorldList(worlds);
 }
 
+async function createNewWorld(worldName: string, _seed: string): Promise<void> {
+  if (!saveManager) return;
+
+  // 检查世界是否已存在
+  const worlds = await saveManager.listWorlds();
+  if (worlds.some((w) => w.name === worldName)) {
+    alert(`世界 "${worldName}" 已存在`);
+    return;
+  }
+
+  // 保存种子到世界元数据
+  await saveManager.savePlayerPosition({ x: 8, y: 255, z: 8 });
+
+  // 开始游戏
+  await startGame(worldName);
+}
+
 async function startGame(worldName: string): Promise<void> {
   if (!currentGame) return;
 
-  // Show loading screen before starting world initialization
-  const loadingElem = document.getElementById('loading');
-  loadingElem?.classList.remove('hidden');
-
-  const ui = currentGame.getUIManager();
-  ui.hideMainMenu();
+  // Show loading screen
+  const loadingElem = document.getElementById("loading");
+  const loadingText = document.getElementById("loading-text");
+  if (loadingText) loadingText.textContent = "加载世界中...";
+  loadingElem?.classList.remove("hidden");
 
   try {
     await currentGame.initialize(worldName);
 
+    // Show game UI
+    const ui = currentGame.getUIManager();
     ui.show();
 
-    // Don't start game loop yet - show pause menu first
-    // Player needs to click "Resume Game" to lock pointer and start
+    // Show initial pause menu (wait for user to resume)
     currentGame.showInitialPauseMenu();
   } catch (error) {
-    console.error('Failed to start game:', error);
+    console.error("Failed to start game:", error);
     returnToMainMenu();
-  }finally{
-    // Hide loading screen on error
-    loadingElem?.classList.add('hidden');
+  } finally {
+    loadingElem?.classList.add("hidden");
   }
 }
 
 function returnToMainMenu(): void {
   if (!currentGame) return;
 
-  // Dispose current game state
   currentGame.dispose().then(() => {
-    // Create new game instance for fresh start
-    const container = document.getElementById('game-container');
+    const container = document.getElementById("game-container");
     if (!container) return;
 
-    // Clear container to remove old canvas and UI elements
-    container.innerHTML = '';
+    // Clear container
+    container.innerHTML = "";
 
+    // Create new game instance
     currentGame = new Game(container);
 
     // Re-setup callbacks
-    const ui = currentGame.getUIManager();
-    ui.setCallbacks({
-      onResume: () => {
-        currentGame?.setPauseMenuVisible(false);
-      },
-      onReturnToMain: () => {
-        returnToMainMenu();
-      },
-      onWorldSelect: async (worldName: string) => {
-        await startGame(worldName);
-      },
-      onWorldCreate: async (worldName: string) => {
-        await startGame(worldName);
-      },
-      onWorldDelete: async (worldName: string) => {
-        await saveManager?.deleteWorld(worldName);
-        await updateWorldList();
-      },
-    });
+    setupUICallbacks();
 
-    // Show main menu with updated world list
+    // Show main menu
+    const ui = currentGame.getUIManager();
     updateWorldList().then(() => {
       ui.showMainMenu();
     });

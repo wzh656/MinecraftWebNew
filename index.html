@@ -1,96 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft Web Edition</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      touch-action: none;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minecraft Web Edition</title>
+    <link rel="stylesheet" href="/src/ui/styles/minecraft-ui.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        touch-action: none;
+      }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-    }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: "Minecraft", monospace;
+      }
 
-    #game-container {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
+      #game-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
 
-    #loading {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('images/background.png') center/cover no-repeat;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      gap: 20px;
-    }
+      #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("images/background.png");
+        background-repeat: repeat;
+        background-size: auto;
+        image-rendering: pixelated;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        gap: 20px;
+      }
 
-    #loading img {
-      width: 64px;
-      height: 64px;
-    }
+      #loading img {
+        width: 64px;
+        height: 64px;
+        image-rendering: pixelated;
+      }
 
-    #loading-text {
-      color: #fff;
-      font-family: 'Courier New', monospace;
-      font-size: 18px;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-      margin-top: 10px;
-    }
+      #loading-text {
+        color: #fff;
+        font-family: "Minecraft", monospace;
+        font-size: 18px;
+        text-shadow: 2px 2px 0 #3f3f3f;
+        margin-top: 10px;
+        -webkit-font-smoothing: none;
+      }
 
-    #loading-progress-container {
-      width: 300px;
-      height: 20px;
-      background: rgba(0, 0, 0, 0.6);
-      border: 2px solid #555;
-      border-radius: 10px;
-      overflow: hidden;
-    }
+      #loading-progress-container {
+        width: 300px;
+        height: 20px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 2px solid #555;
+        border-top-color: #777;
+        border-left-color: #777;
+        border-right-color: #333;
+        border-bottom-color: #333;
+        overflow: hidden;
+      }
 
-    #loading-progress-bar {
-      width: 0%;
-      height: 100%;
-      background: linear-gradient(90deg, #4a4, #6c6);
-      transition: width 0.3s ease;
-    }
+      #loading-progress-bar {
+        width: 0%;
+        height: 100%;
+        background: #4a4;
+        border: 2px solid #5b5;
+        border-top-color: #6c6;
+        border-left-color: #6c6;
+        border-right-color: #383;
+        border-bottom-color: #383;
+        transition: width 0.3s ease;
+      }
 
-    #loading-status {
-      color: #aaa;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    }
+      #loading-status {
+        color: #aaa;
+        font-family: "Minecraft", monospace;
+        font-size: 14px;
+        text-shadow: 1px 1px 0 #3f3f3f;
+        -webkit-font-smoothing: none;
+      }
 
-    .hidden {
-      display: none !important;
-    }
-  </style>
-</head>
-<body>
-  <div id="loading">
-    <img src="images/loading.gif" alt="Loading...">
-    <div id="loading-text">Loading world...</div>
-    <div id="loading-progress-container">
-      <div id="loading-progress-bar"></div>
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading">
+      <img src="images/loading.gif" alt="Loading..." />
+      <div id="loading-text">加载世界中...</div>
+      <div id="loading-progress-container">
+        <div id="loading-progress-bar"></div>
+      </div>
+      <div id="loading-status">初始化...</div>
     </div>
-    <div id="loading-status">Initializing...</div>
-  </div>
-  <div id="game-container"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
+    <div id="game-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

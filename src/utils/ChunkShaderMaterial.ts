@@ -1,8 +1,4 @@
-import {
-  ShaderMaterial,
-  Texture,
-  Color,
-} from 'three';
+import { ShaderMaterial, Texture, Color } from "three";
 
 /**
  * 区块Shader材质 - 实现原版Minecraft风格的雾效
@@ -89,7 +85,7 @@ export class ChunkShaderMaterial {
       // 0x9cb5c4 (156, 181, 196) - 稍灰的蓝色
       fogColor: { value: new Color(0x9cb5c4) },
       fogNear: { value: 100 }, // 雾开始距离
-      fogFar: { value: 200 }, // 雾结束距离
+      fogFar: { value: 400 }, // 雾结束距离
       chunkOpacity: { value: 1.0 }, // 区块透明度（淡入动画）
     };
 
@@ -122,7 +118,7 @@ export class ChunkShaderMaterial {
    * 设置雾颜色
    */
   setFogColor(color: Color | number): void {
-    if (typeof color === 'number') {
+    if (typeof color === "number") {
       this.uniforms.fogColor.value.setHex(color);
     } else {
       this.uniforms.fogColor.value.copy(color);

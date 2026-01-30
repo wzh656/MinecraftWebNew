@@ -1,4 +1,4 @@
-import { ChunkManager } from '../world/ChunkManager';
+import { ChunkManager } from "../world/ChunkManager";
 
 export interface AABB {
   minX: number;
@@ -23,7 +23,7 @@ export class Physics {
     dirX: number,
     dirY: number,
     dirZ: number,
-    maxDistance: number
+    maxDistance: number,
   ): { x: number; y: number; z: number; face: number } | null {
     if (dirX === 0 && dirY === 0 && dirZ === 0) return null;
 

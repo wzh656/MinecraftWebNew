@@ -1,7 +1,7 @@
-import { Chunk } from './Chunk';
-import { BlockType } from './BlockType';
-import { CHUNK_SIZE, CHUNK_HEIGHT } from '../utils/Constants';
-import { createNoise2D } from 'simplex-noise';
+import { Chunk } from "./Chunk";
+import { BlockType } from "./BlockType";
+import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/Constants";
+import { createNoise2D } from "simplex-noise";
 
 export class TerrainGenerator {
   private treeNoise = createNoise2D();
@@ -51,7 +51,8 @@ export class TerrainGenerator {
     const scale1 = 0.05;
     const scale2 = 0.1;
     const height1 = Math.sin(worldX * scale1) * Math.cos(worldZ * scale1) * 8;
-    const height2 = Math.sin(worldX * scale2 + 1.5) * Math.cos(worldZ * scale2 + 2.3) * 4;
+    const height2 =
+      Math.sin(worldX * scale2 + 1.5) * Math.cos(worldZ * scale2 + 2.3) * 4;
 
     // Base height around 60, with variation from 50 to 80
     return Math.floor(60 + height1 + height2);
@@ -71,7 +72,11 @@ export class TerrainGenerator {
       for (let lx = x - leafRadius; lx <= x + leafRadius; lx++) {
         for (let lz = z - leafRadius; lz <= z + leafRadius; lz++) {
           // Skip corners for rounder look
-          if (Math.abs(lx - x) === leafRadius && Math.abs(lz - z) === leafRadius) continue;
+          if (
+            Math.abs(lx - x) === leafRadius &&
+            Math.abs(lz - z) === leafRadius
+          )
+            continue;
           // Skip trunk position
           if (lx === x && lz === z && ly < leafStart + 2) continue;
 

@@ -1,6 +1,6 @@
 {
-  "name": "mc-web",
-  "version": "0.1.0",
+  "name": "minecraft-web-new",
+  "version": "1.0.0",
   "description": "Minecraft web edition with Three.js",
   "type": "module",
   "scripts": {

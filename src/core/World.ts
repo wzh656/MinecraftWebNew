@@ -1,8 +1,8 @@
-import { Scene, Color } from 'three';
-import { ChunkManager } from '../world/ChunkManager';
-import { MeshBuilder } from '../world/MeshBuilder';
-import { TextureLoader } from '../utils/TextureLoader';
-import { RENDER_DISTANCE, CHUNK_SIZE } from '../utils/Constants';
+import { Scene, Color } from "three";
+import { ChunkManager } from "../world/ChunkManager";
+import { MeshBuilder } from "../world/MeshBuilder";
+import { TextureLoader } from "../utils/TextureLoader";
+import { RENDER_DISTANCE, CHUNK_SIZE } from "../utils/Constants";
 
 export class World {
   private chunkManager: ChunkManager;
@@ -20,7 +20,7 @@ export class World {
   }
 
   async initialize(): Promise<void> {
-    await this.textureLoader.load('images/textures.png');
+    await this.textureLoader.load("images/textures.png");
     this.meshBuilder.initialize();
 
     // 设置雾效参数
@@ -41,7 +41,7 @@ export class World {
    * 设置雾颜色
    */
   setFogColor(color: Color | number): void {
-    if (typeof color === 'number') {
+    if (typeof color === "number") {
       this.fogColor.setHex(color);
     } else {
       this.fogColor.copy(color);
@@ -58,7 +58,8 @@ export class World {
   }
 
   update(playerX: number, playerZ: number): void {
-    const { unloaded, cached, uncached } = this.chunkManager.updateVisibleChunks(playerX, playerZ);
+    const { unloaded, cached, uncached } =
+      this.chunkManager.updateVisibleChunks(playerX, playerZ);
 
     // Remove meshes for unloaded chunks (completely removed from memory)
     for (const key of unloaded) {
@@ -75,8 +76,8 @@ export class World {
     // Mark uncached chunks (moving from cache to visible) as needing update
     for (const key of uncached) {
       const chunk = this.chunkManager.getChunk(
-        parseInt(key.split(',')[0]),
-        parseInt(key.split(',')[1])
+        parseInt(key.split(",")[0]),
+        parseInt(key.split(",")[1]),
       );
       if (chunk) {
         chunk.needsUpdate = true;
@@ -96,11 +97,20 @@ export class World {
   }
 
   /**
+   * 设置渲染距离并更新相关系统
+   */
+  setRenderDistance(distance: number): void {
+    this.chunkManager.setRenderDistance(distance);
+    this.updateFogSettings();
+  }
+
+  /**
    * 根据当前渲染距离更新雾效参数
    * 当玩家改变渲染距离设置时调用
    */
   updateFogSettings(): void {
-    const renderDistanceBlocks = RENDER_DISTANCE * CHUNK_SIZE;
+    const currentRenderDistance = this.chunkManager.getRenderDistance();
+    const renderDistanceBlocks = currentRenderDistance * CHUNK_SIZE;
     const fogNear = renderDistanceBlocks * 0.6;
     const fogFar = renderDistanceBlocks * 1.1;
 

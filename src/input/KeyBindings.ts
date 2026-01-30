@@ -11,13 +11,13 @@ export interface KeyBindings {
 }
 
 export const DEFAULT_KEY_BINDINGS: KeyBindings = {
-  forward: 'KeyW',
-  backward: 'KeyS',
-  left: 'KeyA',
-  right: 'KeyD',
-  jump: 'Space',
-  run: 'ShiftLeft',
-  crouch: 'ControlLeft',
-  inventory: 'KeyE',
-  pause: 'Escape',
+  forward: "KeyW",
+  backward: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  jump: "Space",
+  run: "ShiftLeft",
+  crouch: "ControlLeft",
+  inventory: "KeyE",
+  pause: "Escape",
 };

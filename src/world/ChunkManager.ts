@@ -1,7 +1,12 @@
-import { Chunk } from './Chunk';
-import { TerrainGenerator } from './TerrainGenerator';
-import { SaveManager } from '../save/SaveManager';
-import { CHUNK_SIZE, CHUNK_HEIGHT, RENDER_DISTANCE, CACHE_DISTANCE } from '../utils/Constants';
+import { Chunk } from "./Chunk";
+import { TerrainGenerator } from "./TerrainGenerator";
+import { SaveManager } from "../save/SaveManager";
+import {
+  CHUNK_SIZE,
+  CHUNK_HEIGHT,
+  RENDER_DISTANCE,
+  CACHE_DISTANCE,
+} from "../utils/Constants";
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
@@ -11,6 +16,8 @@ export class ChunkManager {
   private saveManager: SaveManager | null = null;
   private pendingSaves = new Set<string>();
   private saveTimeout: number | null = null;
+  private renderDistance = RENDER_DISTANCE;
+  private cacheDistance = CACHE_DISTANCE;
 
   getChunkKey(cx: number, cz: number): string {
     return `${cx},${cz}`;
@@ -32,7 +39,11 @@ export class ChunkManager {
     return chunk;
   }
 
-  private async loadChunkAsync(cx: number, cz: number, placeholder: Chunk): Promise<void> {
+  private async loadChunkAsync(
+    cx: number,
+    cz: number,
+    placeholder: Chunk,
+  ): Promise<void> {
     const saved = await this.loadChunkFromSave(cx, cz);
     if (saved) {
       // Copy saved data to placeholder - only copy available data
@@ -104,7 +115,10 @@ export class ChunkManager {
     return block !== 0;
   }
 
-  updateVisibleChunks(playerX: number, playerZ: number): {
+  updateVisibleChunks(
+    playerX: number,
+    playerZ: number,
+  ): {
     unloaded: string[];
     cached: string[];
     uncached: string[];
@@ -119,18 +133,18 @@ export class ChunkManager {
     const uncachedChunks: string[] = [];
 
     // First pass: determine which chunks should be visible or cached
-    for (let x = -CACHE_DISTANCE; x <= CACHE_DISTANCE; x++) {
-      for (let z = -CACHE_DISTANCE; z <= CACHE_DISTANCE; z++) {
+    for (let x = -this.cacheDistance; x <= this.cacheDistance; x++) {
+      for (let z = -this.cacheDistance; z <= this.cacheDistance; z++) {
         const cx = pcx + x;
         const cz = pcz + z;
         const dist = Math.sqrt(x * x + z * z);
         const key = this.getChunkKey(cx, cz);
 
-        if (dist <= RENDER_DISTANCE) {
+        if (dist <= this.renderDistance) {
           // Render distance: fully loaded and visible
           this.ensureChunk(cx, cz);
           newVisibleChunks.add(key);
-        } else if (dist <= CACHE_DISTANCE) {
+        } else if (dist <= this.cacheDistance) {
           // Cache distance: data kept in memory but not rendered
           this.ensureChunk(cx, cz);
           newCachedChunks.add(key);
@@ -166,7 +180,11 @@ export class ChunkManager {
     this.visibleChunks = newVisibleChunks;
     this.cachedChunks = newCachedChunks;
 
-    return { unloaded: unloadedChunks, cached: cachedChunks, uncached: uncachedChunks };
+    return {
+      unloaded: unloadedChunks,
+      cached: cachedChunks,
+      uncached: uncachedChunks,
+    };
   }
 
   private unloadChunk(key: string): void {
@@ -175,7 +193,12 @@ export class ChunkManager {
       const chunk = this.chunks.get(key);
       if (chunk && this.saveManager) {
         this.saveManager.saveChunk(chunk.x, chunk.z, chunk.data).catch((e) => {
-          console.error('Failed to save chunk before unload:', chunk.x, chunk.z, e);
+          console.error(
+            "Failed to save chunk before unload:",
+            chunk.x,
+            chunk.z,
+            e,
+          );
         });
       }
       this.pendingSaves.delete(key);
@@ -210,7 +233,10 @@ export class ChunkManager {
     this.saveManager = saveManager;
   }
 
-  private async loadChunkFromSave(cx: number, cz: number): Promise<Chunk | undefined> {
+  private async loadChunkFromSave(
+    cx: number,
+    cz: number,
+  ): Promise<Chunk | undefined> {
     if (!this.saveManager) return undefined;
 
     try {
@@ -222,7 +248,7 @@ export class ChunkManager {
         return chunk;
       }
     } catch (e) {
-      console.error('Failed to load chunk:', cx, cz, e);
+      console.error("Failed to load chunk:", cx, cz, e);
     }
     return undefined;
   }
@@ -269,9 +295,11 @@ export class ChunkManager {
       const chunk = this.chunks.get(key);
       if (chunk) {
         promises.push(
-          this.saveManager.saveChunk(chunk.x, chunk.z, chunk.data).catch((e) => {
-            console.error('Failed to save chunk:', chunk.x, chunk.z, e);
-          })
+          this.saveManager
+            .saveChunk(chunk.x, chunk.z, chunk.data)
+            .catch((e) => {
+              console.error("Failed to save chunk:", chunk.x, chunk.z, e);
+            }),
         );
       }
     }
@@ -290,7 +318,11 @@ export class ChunkManager {
     this.cachedChunks.clear();
   }
 
-  async loadPlayerPosition(): Promise<{ x: number; y: number; z: number } | null> {
+  async loadPlayerPosition(): Promise<{
+    x: number;
+    y: number;
+    z: number;
+  } | null> {
     if (!this.saveManager) return null;
     return this.saveManager.loadPlayerPosition();
   }
@@ -303,9 +335,18 @@ export class ChunkManager {
 
   async savePlayerPosition(
     position: { x: number; y: number; z: number },
-    rotation?: { x: number; y: number }
+    rotation?: { x: number; y: number },
   ): Promise<void> {
     if (!this.saveManager) return;
     await this.saveManager.savePlayerPosition(position, rotation);
+  }
+
+  setRenderDistance(distance: number): void {
+    this.renderDistance = Math.max(1, distance);
+    this.cacheDistance = this.renderDistance + 2;
+  }
+
+  getRenderDistance(): number {
+    return this.renderDistance;
   }
 }

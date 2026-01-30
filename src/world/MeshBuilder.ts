@@ -4,16 +4,16 @@ import {
   BufferGeometry,
   BufferAttribute,
   ShaderMaterial,
-} from 'three';
-import { Chunk } from './Chunk';
-import { ChunkManager } from './ChunkManager';
-import { TextureLoader } from '../utils/TextureLoader';
+} from "three";
+import { Chunk } from "./Chunk";
+import { ChunkManager } from "./ChunkManager";
+import { TextureLoader } from "../utils/TextureLoader";
 import {
   ChunkShaderMaterial,
   ChunkFadeManager,
-} from '../utils/ChunkShaderMaterial';
-import { BlockType } from './BlockType';
-import { CHUNK_SIZE, CHUNK_HEIGHT } from '../utils/Constants';
+} from "../utils/ChunkShaderMaterial";
+import { BlockType } from "./BlockType";
+import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/Constants";
 
 export class MeshBuilder {
   private chunkMeshes = new Map<string, Mesh>();
@@ -62,7 +62,11 @@ export class MeshBuilder {
     return `${cx},${cz}`;
   }
 
-  updateChunkMesh(chunk: Chunk, scene: Scene, chunkManager: ChunkManager): Mesh | null {
+  updateChunkMesh(
+    chunk: Chunk,
+    scene: Scene,
+    chunkManager: ChunkManager,
+  ): Mesh | null {
     const key = this.getChunkKey(chunk.x, chunk.z);
 
     const oldMesh = this.chunkMeshes.get(key);
@@ -80,7 +84,8 @@ export class MeshBuilder {
     const material = this.shaderMaterial.getMaterial().clone();
 
     // 检查是否需要淡入动画
-    const isNewChunk = !this.fadeManager.hasCompleted(key) && !this.fadeManager.isFading(key);
+    const isNewChunk =
+      !this.fadeManager.hasCompleted(key) && !this.fadeManager.isFading(key);
     if (isNewChunk) {
       this.fadeManager.startFadeIn(key, 0);
     }
@@ -90,11 +95,7 @@ export class MeshBuilder {
     material.uniforms.chunkOpacity.value = opacity;
 
     const mesh = new Mesh(geometry, material);
-    mesh.position.set(
-      chunk.x * CHUNK_SIZE,
-      0,
-      chunk.z * CHUNK_SIZE
-    );
+    mesh.position.set(chunk.x * CHUNK_SIZE, 0, chunk.z * CHUNK_SIZE);
 
     scene.add(mesh);
     this.chunkMeshes.set(key, mesh);
@@ -150,7 +151,7 @@ export class MeshBuilder {
 
   private buildChunkGeometry(
     chunk: Chunk,
-    chunkManager: ChunkManager
+    chunkManager: ChunkManager,
   ): BufferGeometry | null {
     const positions: number[] = [];
     const uvs: number[] = [];
@@ -163,7 +164,7 @@ export class MeshBuilder {
       y: number,
       z: number,
       face: number,
-      textureIndex: number
+      textureIndex: number,
     ): void => {
       const { u1, v1, u2, v2 } = this.textureLoader.getUVs(textureIndex);
 
@@ -173,7 +174,7 @@ export class MeshBuilder {
         positions.push(
           x + verts[i * 3],
           y + verts[i * 3 + 1],
-          z + verts[i * 3 + 2]
+          z + verts[i * 3 + 2],
         );
       }
 
@@ -185,7 +186,7 @@ export class MeshBuilder {
         vertexCount + 1,
         vertexCount,
         vertexCount + 3,
-        vertexCount + 2
+        vertexCount + 2,
       );
 
       vertexCount += 4;
@@ -227,8 +228,11 @@ export class MeshBuilder {
     if (positions.length === 0) return null;
 
     const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
-    geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+    geometry.setAttribute(
+      "position",
+      new BufferAttribute(new Float32Array(positions), 3),
+    );
+    geometry.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
@@ -281,7 +285,7 @@ export class MeshBuilder {
     for (const mesh of this.chunkMeshes.values()) {
       mesh.geometry.dispose();
       if (Array.isArray(mesh.material)) {
-        mesh.material.forEach(m => m.dispose());
+        mesh.material.forEach((m) => m.dispose());
       } else {
         mesh.material.dispose();
       }
@@ -295,7 +299,7 @@ export class MeshBuilder {
     x: number,
     y: number,
     z: number,
-    face: number
+    face: number,
   ): boolean {
     const offsets = [
       [0, 1, 0],

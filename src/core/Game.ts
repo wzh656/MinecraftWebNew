@@ -1,12 +1,12 @@
-import { Renderer } from './Renderer';
-import { World } from './World';
-import { Player } from '../player/Player';
-import { InputHandler } from '../input/InputHandler';
-import { UIManager } from '../ui/UIManager';
-import { Physics } from '../player/Physics';
-import { BlockType } from '../world/BlockType';
-import { BlockIconRenderer } from '../utils/BlockIconRenderer';
-import { SaveManager } from '../save/SaveManager';
+import { Renderer } from "./Renderer";
+import { World } from "./World";
+import { Player } from "../player/Player";
+import { InputHandler } from "../input/InputHandler";
+import { UIManager } from "../ui/UIManager";
+import { Physics } from "../player/Physics";
+import { BlockType } from "../world/BlockType";
+import { BlockIconRenderer } from "../utils/BlockIconRenderer";
+import { SaveManager } from "../save/SaveManager";
 import {
   PLAYER_INITIAL_X,
   PLAYER_INITIAL_Y,
@@ -19,7 +19,8 @@ import {
   PLAYER_WIDTH,
   PLAYER_DEPTH,
   PLAYER_HEIGHT,
-} from '../utils/Constants';
+} from "../utils/Constants";
+import { GameSettings, settings } from "../utils/Settings";
 
 export class Game {
   private renderer: Renderer;
@@ -61,10 +62,14 @@ export class Game {
     this.physics = new Physics(chunkManager);
     this.player = new Player(this.renderer, chunkManager);
 
-    this.player.setPosition(PLAYER_INITIAL_X, PLAYER_INITIAL_Y, PLAYER_INITIAL_Z);
+    this.player.setPosition(
+      PLAYER_INITIAL_X,
+      PLAYER_INITIAL_Y,
+      PLAYER_INITIAL_Z,
+    );
 
     // Listen for pointer lock changes to show/hide pause menu
-    document.addEventListener('pointerlockchange', () => {
+    document.addEventListener("pointerlockchange", () => {
       const isLocked = document.pointerLockElement === document.body;
       // Sync pause menu state with pointer lock state
       if (!isLocked && this.running && !this.ui.isMainMenuVisible()) {
@@ -82,10 +87,10 @@ export class Game {
   }
 
   async initialize(worldName?: string): Promise<void> {
-    this.updateLoadingStatus('Initializing world...', 0);
+    this.updateLoadingStatus("Initializing world...", 0);
     await this.world.initialize();
 
-    this.updateLoadingStatus('Loading save data...', 20);
+    this.updateLoadingStatus("Loading save data...", 20);
     // Initialize save manager
     this.saveManager = new SaveManager();
     await this.saveManager.init();
@@ -98,19 +103,29 @@ export class Game {
     this.world.getChunkManager().setSaveManager(this.saveManager);
 
     // Load player position and rotation if available
-    const savedPosition = await this.world.getChunkManager().loadPlayerPosition();
+    const savedPosition = await this.world
+      .getChunkManager()
+      .loadPlayerPosition();
     if (savedPosition) {
-      this.player.setPosition(savedPosition.x, savedPosition.y, savedPosition.z);
+      this.player.setPosition(
+        savedPosition.x,
+        savedPosition.y,
+        savedPosition.z,
+      );
     }
 
-    const savedRotation = await this.world.getChunkManager().loadPlayerRotation();
+    const savedRotation = await this.world
+      .getChunkManager()
+      .loadPlayerRotation();
     if (savedRotation) {
       this.renderer.setCameraRotation(savedRotation.x, savedRotation.y);
     }
 
-    this.updateLoadingStatus('Generating block icons...', 40);
+    this.updateLoadingStatus("Generating block icons...", 40);
     // Initialize block icon renderer and generate icons
-    this.blockIconRenderer = new BlockIconRenderer(this.world.getTextureLoader());
+    this.blockIconRenderer = new BlockIconRenderer(
+      this.world.getTextureLoader(),
+    );
     this.blockIconRenderer.initialize();
 
     // Generate icons for all block types
@@ -130,10 +145,14 @@ export class Game {
     });
 
     // Load initial chunks with progress tracking
-    const playerPos = savedPosition ?? { x: PLAYER_INITIAL_X, y: PLAYER_INITIAL_Y, z: PLAYER_INITIAL_Z };
+    const playerPos = savedPosition ?? {
+      x: PLAYER_INITIAL_X,
+      y: PLAYER_INITIAL_Y,
+      z: PLAYER_INITIAL_Z,
+    };
     await this.loadInitialChunks(playerPos.x, playerPos.z);
 
-    this.updateLoadingStatus('Starting game...', 100);
+    this.updateLoadingStatus("Starting game...", 100);
 
     // Loading screen is managed by main.ts for initial load
     // World loading overlay would be handled separately
@@ -147,8 +166,8 @@ export class Game {
   }
 
   private updateLoadingStatus(status: string, progress: number): void {
-    const statusEl = document.getElementById('loading-status');
-    const progressBar = document.getElementById('loading-progress-bar');
+    const statusEl = document.getElementById("loading-status");
+    const progressBar = document.getElementById("loading-progress-bar");
     if (statusEl) {
       statusEl.textContent = status;
     }
@@ -157,8 +176,11 @@ export class Game {
     }
   }
 
-  private async loadInitialChunks(playerX: number, playerZ: number): Promise<void> {
-    this.updateLoadingStatus('Loading chunks...', 60);
+  private async loadInitialChunks(
+    playerX: number,
+    playerZ: number,
+  ): Promise<void> {
+    this.updateLoadingStatus("Loading chunks...", 60);
 
     // Trigger chunk loading
     this.world.update(playerX, playerZ);
@@ -178,7 +200,7 @@ export class Game {
       }
 
       // Check how many chunks have been fully loaded (have data)
-      const loadedChunks = visibleChunks.filter(chunk => {
+      const loadedChunks = visibleChunks.filter((chunk) => {
         // A chunk is considered loaded if it has been initialized with data
         // We check if any non-air block exists by sampling
         for (let i = 0; i < chunk.data.length; i++) {
@@ -188,7 +210,10 @@ export class Game {
       }).length;
 
       const progress = 60 + Math.floor((loadedChunks / totalChunks) * 35);
-      this.updateLoadingStatus(`Loading chunks... (${loadedChunks}/${totalChunks})`, progress);
+      this.updateLoadingStatus(
+        `Loading chunks... (${loadedChunks}/${totalChunks})`,
+        progress,
+      );
 
       if (loadedChunks >= totalChunks) {
         // All chunks loaded, give a moment for mesh generation
@@ -203,7 +228,7 @@ export class Game {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   start(): void {
@@ -282,7 +307,7 @@ export class Game {
 
   private handleInput(_delta: number): void {
     // Handle ESC key for pause menu
-    if (this.input.isKeyDown('Escape')) {
+    if (this.input.isKeyDown("Escape")) {
       if (!this.pauseMenuVisible) {
         this.setPauseMenuVisible(true);
       }
@@ -298,7 +323,7 @@ export class Game {
     }
 
     // Track if W was pressed this frame for sprint detection
-    const wPressed = this.input.isKeyDown('KeyW');
+    const wPressed = this.input.isKeyDown("KeyW");
 
     // Handle double-tap for flight toggle (double Space)
     if (this.input.isDoubleSpaceTap()) {
@@ -318,15 +343,15 @@ export class Game {
       }
       this.player.moveForward(1);
     }
-    if (this.input.isKeyDown('KeyS')) {
+    if (this.input.isKeyDown("KeyS")) {
       this.player.moveForward(-1);
       this.player.deactivateSprint();
       this.sprintActive = false;
     }
-    if (this.input.isKeyDown('KeyA')) {
+    if (this.input.isKeyDown("KeyA")) {
       this.player.moveRight(-1);
     }
-    if (this.input.isKeyDown('KeyD')) {
+    if (this.input.isKeyDown("KeyD")) {
       this.player.moveRight(1);
     }
 
@@ -339,11 +364,14 @@ export class Game {
     // Handle flight movement
     let verticalInput = false;
     if (this.player.isFlying()) {
-      if (this.input.isKeyDown('Space')) {
+      if (this.input.isKeyDown("Space")) {
         this.player.ascend();
         verticalInput = true;
       }
-      if (this.input.isKeyDown('ShiftLeft') || this.input.isKeyDown('ShiftRight')) {
+      if (
+        this.input.isKeyDown("ShiftLeft") ||
+        this.input.isKeyDown("ShiftRight")
+      ) {
         this.player.descend();
         verticalInput = true;
       }
@@ -353,17 +381,20 @@ export class Game {
       }
     } else {
       // Normal jump when not flying
-      if (this.input.isKeyDown('Space')) {
+      if (this.input.isKeyDown("Space")) {
         this.player.jump();
       }
     }
 
     const mouseDelta = this.input.getMouseDelta();
     if (this.input.isLocked() && (mouseDelta.dx !== 0 || mouseDelta.dy !== 0)) {
-      this.renderer.rotateCamera(-mouseDelta.dx * 0.002, -mouseDelta.dy * 0.002);
+      this.renderer.rotateCamera(
+        -mouseDelta.dx * 0.002,
+        -mouseDelta.dy * 0.002,
+      );
     }
 
-    if (this.input.isMouseDown('left')) {
+    if (this.input.isMouseDown("left")) {
       this.input.lockPointer();
     }
   }
@@ -381,11 +412,17 @@ export class Game {
 
     const now = performance.now();
 
-    if (this.input.isMouseDown('left') && now - this.lastBreakTime > this.breakCooldown) {
+    if (
+      this.input.isMouseDown("left") &&
+      now - this.lastBreakTime > this.breakCooldown
+    ) {
       this.breakBlock();
       this.lastBreakTime = now;
     }
-    if (this.input.isMouseDown('right') && now - this.lastPlaceTime > this.placeCooldown) {
+    if (
+      this.input.isMouseDown("right") &&
+      now - this.lastPlaceTime > this.placeCooldown
+    ) {
       this.placeBlock();
       this.lastPlaceTime = now;
     }
@@ -396,7 +433,8 @@ export class Game {
     for (let i = 1; i <= HOTBAR_SIZE; i++) {
       if (this.input.isKeyDown(`Digit${i}`)) {
         this.selectedSlot = i - 1;
-        this.selectedBlock = this.blockTypes[this.selectedSlot] ?? BlockType.STONE;
+        this.selectedBlock =
+          this.blockTypes[this.selectedSlot] ?? BlockType.STONE;
         this.ui.setHotbarSelection(this.selectedSlot);
       }
     }
@@ -407,8 +445,10 @@ export class Game {
       // wheelDelta > 0: scroll down (next slot)
       // wheelDelta < 0: scroll up (previous slot)
       const slotCount = this.blockTypes.length;
-      this.selectedSlot = (this.selectedSlot + wheelDelta + slotCount) % slotCount;
-      this.selectedBlock = this.blockTypes[this.selectedSlot] ?? BlockType.STONE;
+      this.selectedSlot =
+        (this.selectedSlot + wheelDelta + slotCount) % slotCount;
+      this.selectedBlock =
+        this.blockTypes[this.selectedSlot] ?? BlockType.STONE;
       this.ui.setHotbarSelection(this.selectedSlot);
     }
   }
@@ -443,7 +483,7 @@ export class Game {
       forward.x,
       forward.y,
       forward.z,
-      RAYCAST_MAX_DISTANCE
+      RAYCAST_MAX_DISTANCE,
     );
   }
 
@@ -451,7 +491,7 @@ export class Game {
     x: number,
     y: number,
     z: number,
-    face: number
+    face: number,
   ): { x: number; y: number; z: number } {
     const offsets = [
       [0, 1, 0],
@@ -487,9 +527,12 @@ export class Game {
 
     // Check AABB intersection
     return (
-      blockMinX < playerMaxX && blockMaxX > playerMinX &&
-      blockMinY < playerMaxY && blockMaxY > playerMinY &&
-      blockMinZ < playerMaxZ && blockMaxZ > playerMinZ
+      blockMinX < playerMaxX &&
+      blockMaxX > playerMinX &&
+      blockMinY < playerMaxY &&
+      blockMaxY > playerMinY &&
+      blockMinZ < playerMaxZ &&
+      blockMaxZ > playerMinZ
     );
   }
 
@@ -574,14 +617,26 @@ export class Game {
     this.world.getChunkManager().clear();
 
     // Reload player position
-    const savedPosition = await this.world.getChunkManager().loadPlayerPosition();
+    const savedPosition = await this.world
+      .getChunkManager()
+      .loadPlayerPosition();
     if (savedPosition) {
-      this.player.setPosition(savedPosition.x, savedPosition.y, savedPosition.z);
+      this.player.setPosition(
+        savedPosition.x,
+        savedPosition.y,
+        savedPosition.z,
+      );
     } else {
-      this.player.setPosition(PLAYER_INITIAL_X, PLAYER_INITIAL_Y, PLAYER_INITIAL_Z);
+      this.player.setPosition(
+        PLAYER_INITIAL_X,
+        PLAYER_INITIAL_Y,
+        PLAYER_INITIAL_Z,
+      );
     }
 
-    const savedRotation = await this.world.getChunkManager().loadPlayerRotation();
+    const savedRotation = await this.world
+      .getChunkManager()
+      .loadPlayerRotation();
     if (savedRotation) {
       this.renderer.setCameraRotation(savedRotation.x, savedRotation.y);
     } else {
@@ -591,5 +646,17 @@ export class Game {
     // Update world to load chunks
     const playerPos = this.player.getPosition();
     this.world.update(playerPos.x, playerPos.z);
+  }
+
+  applySettings(newSettings: GameSettings): void {
+    this.player.updateSpeeds({
+      normal: newSettings.playerSpeed,
+      sprint: settings.playerSprintSpeed,
+      flight: settings.playerFlightSpeed,
+      jump: newSettings.playerJumpSpeed,
+    });
+
+    this.renderer.setFOV(newSettings.fov);
+    this.world.setRenderDistance(newSettings.renderDistance);
   }
 }

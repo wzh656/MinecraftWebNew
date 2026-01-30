@@ -1,4 +1,4 @@
-import { PerspectiveCamera } from 'three';
+import { PerspectiveCamera } from "three";
 
 export class CameraController {
   private camera: PerspectiveCamera;
@@ -10,7 +10,7 @@ export class CameraController {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      1000,
     );
   }
 
@@ -48,7 +48,7 @@ export class CameraController {
   }
 
   private updateRotation(): void {
-    this.camera.rotation.order = 'YXZ';
+    this.camera.rotation.order = "YXZ";
     this.camera.rotation.y = this.yaw;
     this.camera.rotation.x = this.pitch;
   }

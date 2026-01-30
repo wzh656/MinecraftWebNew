@@ -1,0 +1,392 @@
+/* Minecraft UI Style System - 像素风格CSS */
+
+/* ===== 字体定义 ===== */
+@font-face {
+  font-family: "Minecraft";
+  src: url("/fonts/minecraftfont.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== 基础样式 ===== */
+.mc-font {
+  font-family: "Minecraft", monospace;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
+/* ===== 背景纹理 ===== */
+.mc-background {
+  background-image: url("images/background.png");
+  background-repeat: repeat;
+  background-size: auto;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* ===== 半透明遮罩层 ===== */
+.mc-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.mc-overlay-dark {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* ===== 按钮样式 - 原版MC风格 ===== */
+.mc-button {
+  font-family: "Minecraft", monospace;
+  font-size: 16px;
+  color: white;
+  background-color: #6b6b6b;
+  border: 2px solid #000;
+  border-top-color: #8b8b8b;
+  border-left-color: #8b8b8b;
+  border-right-color: #373737;
+  border-bottom-color: #373737;
+  padding: 8px 16px;
+  cursor: pointer;
+  text-align: center;
+  min-width: 200px;
+  min-height: 36px;
+  box-shadow:
+    inset -2px -2px 0 0 #555,
+    inset 2px 2px 0 0 #999;
+  /* 无圆角 */
+  border-radius: 0;
+  transition: none;
+  image-rendering: pixelated;
+}
+
+.mc-button:hover {
+  color: #ffff55; /* 原版MC黄色高亮 */
+  background-color: #7b7b7b;
+}
+
+.mc-button:active {
+  border-top-color: #373737;
+  border-left-color: #373737;
+  border-right-color: #8b8b8b;
+  border-bottom-color: #8b8b8b;
+  box-shadow:
+    inset 2px 2px 0 0 #555,
+    inset -2px -2px 0 0 #999;
+}
+
+.mc-button:disabled {
+  color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+/* 小号按钮 */
+.mc-button-small {
+  min-width: 120px;
+  font-size: 14px;
+  padding: 6px 12px;
+  min-height: 28px;
+}
+
+/* ===== 输入框样式 ===== */
+.mc-input {
+  font-family: "Minecraft", monospace;
+  font-size: 14px;
+  color: white;
+  background-color: #000;
+  border: 2px solid #8b8b8b;
+  border-top-color: #373737;
+  border-left-color: #373737;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+  padding: 8px 12px;
+  outline: none;
+  border-radius: 0;
+}
+
+.mc-input:focus {
+  border-color: #ffff55;
+  border-top-color: #aaaa00;
+  border-left-color: #aaaa00;
+}
+
+.mc-input::placeholder {
+  color: #666;
+}
+
+/* ===== 列表项样式 ===== */
+.mc-list-item {
+  font-family: "Minecraft", monospace;
+  font-size: 14px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 2px solid transparent;
+  padding: 10px 12px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border-radius: 0;
+}
+
+.mc-list-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #8b8b8b;
+}
+
+.mc-list-item.selected {
+  background-color: rgba(255, 255, 85, 0.2);
+  border-color: #ffff55;
+  color: #ffff55;
+}
+
+/* ===== 容器面板 ===== */
+.mc-panel {
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 3px solid #555;
+  border-top-color: #777;
+  border-left-color: #777;
+  border-right-color: #333;
+  border-bottom-color: #333;
+  padding: 16px;
+  border-radius: 0;
+}
+
+/* ===== 标题样式 ===== */
+.mc-title {
+  font-family: "Minecraft", monospace;
+  font-size: 32px;
+  color: white;
+  text-align: center;
+  text-shadow:
+    3px 3px 0 #3f3f3f,
+    -1px -1px 0 #8b8b8b;
+  margin-bottom: 30px;
+}
+
+.mc-subtitle {
+  font-family: "Minecraft", monospace;
+  font-size: 20px;
+  color: #aaaaaa;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.mc-label {
+  font-family: "Minecraft", monospace;
+  font-size: 14px;
+  color: #aaaaaa;
+  margin-bottom: 4px;
+}
+
+/* ===== 滚动条样式 - 像素风 ===== */
+.mc-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.mc-scroll::-webkit-scrollbar-track {
+  background: #000;
+  border: 2px solid #555;
+}
+
+.mc-scroll::-webkit-scrollbar-thumb {
+  background: #6b6b6b;
+  border: 2px solid #8b8b8b;
+  border-right-color: #373737;
+  border-bottom-color: #373737;
+}
+
+.mc-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7b7b7b;
+}
+
+/* ===== 分隔线 ===== */
+.mc-divider {
+  border: none;
+  border-top: 2px solid #555;
+  border-bottom: 2px solid #333;
+  margin: 16px 0;
+}
+
+/* ===== 游戏内UI覆盖层 ===== */
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+
+#ui-layer > * {
+  pointer-events: auto;
+}
+
+/* ===== 菜单覆盖层 ===== */
+.mc-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.mc-menu-overlay.mc-background {
+  background-image: url("/images/background.png");
+  background-repeat: repeat;
+  background-size: auto;
+  image-rendering: pixelated;
+}
+
+/* 存档列表容器 */
+.mc-world-list {
+  width: 500px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #555;
+  padding: 8px;
+}
+
+/* 世界信息行 */
+.mc-world-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-world-name {
+  font-size: 16px;
+  color: white;
+}
+
+.mc-world-date {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* 按钮行布局 */
+.mc-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.mc-button-row .mc-button {
+  min-width: 140px;
+}
+
+/* 设置项容器 */
+.mc-setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #444;
+}
+
+.mc-setting-row:last-child {
+  border-bottom: none;
+}
+
+.mc-setting-label {
+  font-family: "Minecraft", monospace;
+  color: white;
+  font-size: 14px;
+}
+
+.mc-setting-value {
+  font-family: "Minecraft", monospace;
+  color: #ffff55;
+  font-size: 14px;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* 滑块样式 */
+.mc-slider {
+  -webkit-appearance: none;
+  width: 150px;
+  height: 20px;
+  background: #333;
+  border: 2px solid #555;
+  border-top-color: #222;
+  border-left-color: #222;
+  outline: none;
+  border-radius: 0;
+}
+
+.mc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 24px;
+  background: #6b6b6b;
+  border: 2px solid #8b8b8b;
+  border-right-color: #373737;
+  border-bottom-color: #373737;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.mc-slider::-webkit-slider-thumb:hover {
+  background: #7b7b7b;
+}
+
+/* 对话框遮罩 */
+.mc-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+
+.mc-dialog {
+  background: rgba(0, 0, 0, 0.9);
+  border: 3px solid #555;
+  border-top-color: #777;
+  border-left-color: #777;
+  padding: 20px;
+  min-width: 300px;
+  border-radius: 0;
+}
+
+.mc-dialog-title {
+  font-family: "Minecraft", monospace;
+  font-size: 18px;
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* 确认对话框按钮布局 */
+.mc-dialog-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* 警告/危险按钮 */
+.mc-button-danger {
+  color: #ff5555;
+}
+
+.mc-button-danger:hover {
+  color: #ff8888;
+}

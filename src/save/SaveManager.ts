@@ -1,7 +1,7 @@
-const DB_NAME = 'MinecraftWebDB';
+const DB_NAME = "MinecraftWebDB";
 const DB_VERSION = 1;
-const CHUNK_STORE = 'chunks';
-const META_STORE = 'metadata';
+const CHUNK_STORE = "chunks";
+const META_STORE = "metadata";
 
 interface ChunkData {
   cx: number;
@@ -20,7 +20,7 @@ interface WorldMetadata {
 
 export class SaveManager {
   private db: IDBDatabase | null = null;
-  private currentWorld: string = 'default';
+  private currentWorld: string = "default";
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -37,13 +37,15 @@ export class SaveManager {
 
         // Create chunks store with world+chunk key
         if (!db.objectStoreNames.contains(CHUNK_STORE)) {
-          const chunkStore = db.createObjectStore(CHUNK_STORE, { keyPath: 'key' });
-          chunkStore.createIndex('world', 'worldName', { unique: false });
+          const chunkStore = db.createObjectStore(CHUNK_STORE, {
+            keyPath: "key",
+          });
+          chunkStore.createIndex("world", "worldName", { unique: false });
         }
 
         // Create metadata store for world info
         if (!db.objectStoreNames.contains(META_STORE)) {
-          db.createObjectStore(META_STORE, { keyPath: 'name' });
+          db.createObjectStore(META_STORE, { keyPath: "name" });
         }
       };
     });
@@ -62,19 +64,22 @@ export class SaveManager {
   }
 
   async saveChunk(cx: number, cz: number, data: Uint8Array): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     const chunkData: ChunkData & { key: string; worldName: string } = {
       key: this.getChunkKey(cx, cz),
       worldName: this.currentWorld,
       cx,
       cz,
-      data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer,
+      data: data.buffer.slice(
+        data.byteOffset,
+        data.byteOffset + data.byteLength,
+      ) as ArrayBuffer,
       timestamp: Date.now(),
     };
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([CHUNK_STORE], 'readwrite');
+      const transaction = this.db!.transaction([CHUNK_STORE], "readwrite");
       const store = transaction.objectStore(CHUNK_STORE);
       const request = store.put(chunkData);
 
@@ -84,10 +89,10 @@ export class SaveManager {
   }
 
   async loadChunk(cx: number, cz: number): Promise<Uint8Array | null> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([CHUNK_STORE], 'readonly');
+      const transaction = this.db!.transaction([CHUNK_STORE], "readonly");
       const store = transaction.objectStore(CHUNK_STORE);
       const request = store.get(this.getChunkKey(cx, cz));
 
@@ -104,10 +109,10 @@ export class SaveManager {
   }
 
   async deleteChunk(cx: number, cz: number): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([CHUNK_STORE], 'readwrite');
+      const transaction = this.db!.transaction([CHUNK_STORE], "readwrite");
       const store = transaction.objectStore(CHUNK_STORE);
       const request = store.delete(this.getChunkKey(cx, cz));
 
@@ -118,9 +123,9 @@ export class SaveManager {
 
   async savePlayerPosition(
     position: { x: number; y: number; z: number },
-    rotation?: { x: number; y: number }
+    rotation?: { x: number; y: number },
   ): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     const metadata: WorldMetadata = {
       name: this.currentWorld,
@@ -137,7 +142,7 @@ export class SaveManager {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([META_STORE], 'readwrite');
+      const transaction = this.db!.transaction([META_STORE], "readwrite");
       const store = transaction.objectStore(META_STORE);
       const request = store.put(metadata);
 
@@ -146,7 +151,11 @@ export class SaveManager {
     });
   }
 
-  async loadPlayerPosition(): Promise<{ x: number; y: number; z: number } | null> {
+  async loadPlayerPosition(): Promise<{
+    x: number;
+    y: number;
+    z: number;
+  } | null> {
     const metadata = await this.getWorldMetadata(this.currentWorld);
     return metadata?.playerPosition ?? null;
   }
@@ -156,11 +165,13 @@ export class SaveManager {
     return this.getWorldMetadata(name);
   }
 
-  private async getWorldMetadata(worldName: string): Promise<WorldMetadata | null> {
-    if (!this.db) throw new Error('Database not initialized');
+  private async getWorldMetadata(
+    worldName: string,
+  ): Promise<WorldMetadata | null> {
+    if (!this.db) throw new Error("Database not initialized");
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([META_STORE], 'readonly');
+      const transaction = this.db!.transaction([META_STORE], "readonly");
       const store = transaction.objectStore(META_STORE);
       const request = store.get(worldName);
 
@@ -169,11 +180,13 @@ export class SaveManager {
     });
   }
 
-  async listWorlds(): Promise<Array<{ name: string; createdAt: number; lastPlayed: number }>> {
-    if (!this.db) throw new Error('Database not initialized');
+  async listWorlds(): Promise<
+    Array<{ name: string; createdAt: number; lastPlayed: number }>
+  > {
+    if (!this.db) throw new Error("Database not initialized");
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([META_STORE], 'readonly');
+      const transaction = this.db!.transaction([META_STORE], "readonly");
       const store = transaction.objectStore(META_STORE);
       const request = store.getAll();
 
@@ -184,7 +197,7 @@ export class SaveManager {
             name: r.name,
             createdAt: r.createdAt,
             lastPlayed: r.lastPlayed,
-          }))
+          })),
         );
       };
       request.onerror = () => reject(request.error);
@@ -192,13 +205,16 @@ export class SaveManager {
   }
 
   async deleteWorld(worldName: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     // Delete all chunks for this world
     const chunks = await this.getAllChunksForWorld(worldName);
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([CHUNK_STORE, META_STORE], 'readwrite');
+      const transaction = this.db!.transaction(
+        [CHUNK_STORE, META_STORE],
+        "readwrite",
+      );
 
       // Delete chunks
       const chunkStore = transaction.objectStore(CHUNK_STORE);
@@ -215,13 +231,15 @@ export class SaveManager {
     });
   }
 
-  private async getAllChunksForWorld(worldName: string): Promise<Array<{ cx: number; cz: number }>> {
+  private async getAllChunksForWorld(
+    worldName: string,
+  ): Promise<Array<{ cx: number; cz: number }>> {
     if (!this.db) return [];
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([CHUNK_STORE], 'readonly');
+      const transaction = this.db!.transaction([CHUNK_STORE], "readonly");
       const store = transaction.objectStore(CHUNK_STORE);
-      const index = store.index('world');
+      const index = store.index("world");
       const request = index.getAll(worldName);
 
       request.onsuccess = () => {

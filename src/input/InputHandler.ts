@@ -1,8 +1,15 @@
-import { DOUBLE_TAP_WINDOW } from '../utils/Constants';
+import { DOUBLE_TAP_WINDOW } from "../utils/Constants";
 
 export class InputHandler {
   private keys = new Map<string, boolean>();
-  private mouse = { x: 0, y: 0, dx: 0, dy: 0, leftDown: false, rightDown: false };
+  private mouse = {
+    x: 0,
+    y: 0,
+    dx: 0,
+    dy: 0,
+    leftDown: false,
+    rightDown: false,
+  };
   private locked = false;
   private wheelDelta = 0;
 
@@ -17,7 +24,7 @@ export class InputHandler {
   }
 
   private setupEventListeners(): void {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       this.keys.set(e.code, true);
 
       // Ignore keyboard auto-repeat events for double-tap detection
@@ -26,7 +33,7 @@ export class InputHandler {
       }
 
       // Double-tap detection for Space (flight toggle)
-      if (e.code === 'Space') {
+      if (e.code === "Space") {
         const now = performance.now();
         if (now - this.lastSpaceTapTime < DOUBLE_TAP_WINDOW) {
           this.doubleSpaceDetected = true;
@@ -35,7 +42,7 @@ export class InputHandler {
       }
 
       // Double-tap detection for W (sprint toggle)
-      if (e.code === 'KeyW') {
+      if (e.code === "KeyW") {
         const now = performance.now();
         if (now - this.lastWTapTime < DOUBLE_TAP_WINDOW) {
           this.doubleWDetected = true;
@@ -44,51 +51,67 @@ export class InputHandler {
       }
     });
 
-    document.addEventListener('keyup', (e) => {
+    document.addEventListener("keyup", (e) => {
       this.keys.set(e.code, false);
     });
 
-    document.addEventListener('mousemove', (e) => {
-      if (this.locked) {
-        this.mouse.dx += e.movementX;
-        this.mouse.dy += e.movementY;
-      }
-      this.mouse.x = e.clientX;
-      this.mouse.y = e.clientY;
-      // Prevent default when locked to avoid browser gestures
-      // if (this.locked && e.buttons === 2) {
-      //   e.preventDefault();
-      // }
-    }, { passive: false });
+    document.addEventListener(
+      "mousemove",
+      (e) => {
+        if (this.locked) {
+          this.mouse.dx += e.movementX;
+          this.mouse.dy += e.movementY;
+        }
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
+        // Prevent default when locked to avoid browser gestures
+        // if (this.locked && e.buttons === 2) {
+        //   e.preventDefault();
+        // }
+      },
+      { passive: false },
+    );
 
     // Use capture phase to intercept events before they reach other handlers
-    document.addEventListener('mousedown', (e) => {
-      console.log('Mouse down event:', e.button);
-      if (e.button === 0) this.mouse.leftDown = true;
-      if (e.button === 2) this.mouse.rightDown = true;
-      // Only prevent default when pointer is locked (in game), not for UI interactions
-      if (this.locked) {
+    document.addEventListener(
+      "mousedown",
+      (e) => {
+        console.log("Mouse down event:", e.button);
+        if (e.button === 0) this.mouse.leftDown = true;
+        if (e.button === 2) this.mouse.rightDown = true;
+        // Only prevent default when pointer is locked (in game), not for UI interactions
+        if (this.locked) {
+          e.preventDefault();
+          return false;
+        }
+      },
+      { passive: false },
+    );
+
+    document.addEventListener(
+      "mouseup",
+      (e) => {
+        console.log("Mouse up event:", e.button);
+        if (e.button === 0) this.mouse.leftDown = false;
+        if (e.button === 2) this.mouse.rightDown = false;
+        return false;
+      },
+      false,
+    );
+
+    document.addEventListener(
+      "contextmenu",
+      (e) => {
+        console.log("Context menu event");
         e.preventDefault();
         return false;
-      }
-    }, { passive: false });
+      },
+      { passive: false },
+    );
 
-    document.addEventListener('mouseup', (e) => {
-      console.log('Mouse up event:', e.button);
-      if (e.button === 0) this.mouse.leftDown = false;
-      if (e.button === 2) this.mouse.rightDown = false;
-      return false;
-    }, false);
-
-    document.addEventListener('contextmenu', (e) => {
-      console.log('Context menu event');
-      e.preventDefault();
-      return false;
-    }, { passive: false });
-
-    document.addEventListener('pointerlockchange', () => {
+    document.addEventListener("pointerlockchange", () => {
       this.locked = document.pointerLockElement === document.body;
-      console.log('Pointer lock change', this.locked);
+      console.log("Pointer lock change", this.locked);
       // Reset mouse state when pointer lock is lost
       if (!this.locked) {
         this.mouse.leftDown = false;
@@ -96,9 +119,13 @@ export class InputHandler {
       }
     });
 
-    document.addEventListener('wheel', (e) => {
-      this.wheelDelta += Math.sign(e.deltaY);
-    }, { passive: true });
+    document.addEventListener(
+      "wheel",
+      (e) => {
+        this.wheelDelta += Math.sign(e.deltaY);
+      },
+      { passive: true },
+    );
   }
 
   isKeyDown(code: string): boolean {
@@ -118,13 +145,13 @@ export class InputHandler {
     return delta;
   }
 
-  isMouseDown(button: 'left' | 'right'): boolean {
-    return button === 'left' ? this.mouse.leftDown : this.mouse.rightDown;
+  isMouseDown(button: "left" | "right"): boolean {
+    return button === "left" ? this.mouse.leftDown : this.mouse.rightDown;
   }
 
   lockPointer(): void {
     document.body.requestPointerLock().catch((err) => {
-      console.log('Pointer lock request failed:', err);
+      console.log("Pointer lock request failed:", err);
     });
   }
 

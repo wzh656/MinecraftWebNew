@@ -1,5 +1,5 @@
-import { CHUNK_SIZE, CHUNK_HEIGHT } from '../utils/Constants';
-import { BlockType } from './BlockType';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/Constants";
+import { BlockType } from "./BlockType";
 
 export class Chunk {
   public data: Uint8Array;
@@ -11,7 +11,7 @@ export class Chunk {
     this.x = x;
     this.z = z;
     this.data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE).fill(
-      BlockType.AIR
+      BlockType.AIR,
     );
   }
 

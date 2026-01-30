@@ -4,7 +4,7 @@ import {
   PerspectiveCamera,
   WebGLRendererParameters,
   Color,
-} from 'three';
+} from "three";
 
 export class Renderer {
   private renderer: WebGLRenderer;
@@ -14,7 +14,7 @@ export class Renderer {
   constructor(container: HTMLElement) {
     const params: WebGLRendererParameters = {
       antialias: false,
-      powerPreference: 'high-performance',
+      powerPreference: "high-performance",
     };
 
     this.renderer = new WebGLRenderer(params);
@@ -35,12 +35,12 @@ export class Renderer {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      1000,
     );
 
     container.appendChild(this.renderer.domElement);
 
-    window.addEventListener('resize', this.handleResize.bind(this));
+    window.addEventListener("resize", this.handleResize.bind(this));
   }
 
   private handleResize(): void {
@@ -75,7 +75,7 @@ export class Renderer {
 
   setCameraRotation(x: number, y: number, z?: number): void {
     // Always use YXZ order for consistent camera rotation
-    this.camera.rotation.order = 'YXZ';
+    this.camera.rotation.order = "YXZ";
     if (z !== undefined) {
       this.camera.rotation.set(x, y, z);
     } else {
@@ -85,12 +85,12 @@ export class Renderer {
   }
 
   rotateCamera(yawDelta: number, pitchDelta: number): void {
-    this.camera.rotation.order = 'YXZ';
+    this.camera.rotation.order = "YXZ";
     this.camera.rotation.y += yawDelta;
     this.camera.rotation.x += pitchDelta;
     this.camera.rotation.x = Math.max(
       -Math.PI / 2,
-      Math.min(Math.PI / 2, this.camera.rotation.x)
+      Math.min(Math.PI / 2, this.camera.rotation.x),
     );
   }
 
@@ -135,8 +135,13 @@ export class Renderer {
     };
   }
 
+  setFOV(fov: number): void {
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
+  }
+
   dispose(): void {
     this.renderer.dispose();
-    window.removeEventListener('resize', this.handleResize.bind(this));
+    window.removeEventListener("resize", this.handleResize.bind(this));
   }
 }
