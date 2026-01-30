@@ -59,60 +59,96 @@ export class Physics {
     const tDeltaZ = ndz !== 0 ? Math.abs(1 / ndz) : Infinity;
 
     // First check: is the starting position inside a solid block?
-    // If so, return that block immediately (player is stuck)
     if (this.chunkManager.isSolid(bx, by, bz)) {
-      // Determine which face the ray is exiting from
-      // This is approximate - we use the direction as hint
       let face = 0;
       const absX = Math.abs(ndx);
       const absY = Math.abs(ndy);
       const absZ = Math.abs(ndz);
       if (absX >= absY && absX >= absZ) {
-        face = ndx > 0 ? 4 : 5; // Exiting from -X or +X face
+        face = ndx > 0 ? 4 : 5;
       } else if (absY >= absX && absY >= absZ) {
-        face = ndy > 0 ? 1 : 0; // Exiting from -Y or +Y face
+        face = ndy > 0 ? 1 : 0;
       } else {
-        face = ndz > 0 ? 3 : 2; // Exiting from -Z or +Z face
+        face = ndz > 0 ? 3 : 2;
       }
       return { x: bx, y: by, z: bz, face };
     }
 
     // DDA traversal
     let t = 0;
-    let prevBx = bx;
-    let prevBy = by;
-    let prevBz = bz;
 
     while (t < maxDistance) {
+      // Store previous position before stepping
+      const prevBx = bx;
+      const prevBy = by;
+      const prevBz = bz;
+
       // Move to next voxel
-      if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-        t = tMaxX;
-        tMaxX += tDeltaX;
-        prevBx = bx;
-        bx += stepX;
-      } else if (tMaxY < tMaxZ) {
-        t = tMaxY;
-        tMaxY += tDeltaY;
-        prevBy = by;
-        by += stepY;
+      // When ray is pointing primarily downward (|ndy| > |ndx| and |ndy| > |ndz|),
+      // we MUST prioritize Y steps to avoid detecting side faces when looking at top face
+      const absNdx = Math.abs(ndx);
+      const absNdy = Math.abs(ndy);
+      const absNdz = Math.abs(ndz);
+
+      if (absNdy >= absNdx && absNdy >= absNdz) {
+        // Y is dominant direction - prioritize Y steps
+        if (tMaxY <= tMaxX && tMaxY <= tMaxZ) {
+          t = tMaxY;
+          tMaxY += tDeltaY;
+          by += stepY;
+        } else if (tMaxX <= tMaxZ) {
+          t = tMaxX;
+          tMaxX += tDeltaX;
+          bx += stepX;
+        } else {
+          t = tMaxZ;
+          tMaxZ += tDeltaZ;
+          bz += stepZ;
+        }
+      } else if (absNdx >= absNdy && absNdx >= absNdz) {
+        // X is dominant direction
+        if (tMaxX <= tMaxY && tMaxX <= tMaxZ) {
+          t = tMaxX;
+          tMaxX += tDeltaX;
+          bx += stepX;
+        } else if (tMaxY <= tMaxZ) {
+          t = tMaxY;
+          tMaxY += tDeltaY;
+          by += stepY;
+        } else {
+          t = tMaxZ;
+          tMaxZ += tDeltaZ;
+          bz += stepZ;
+        }
       } else {
-        t = tMaxZ;
-        tMaxZ += tDeltaZ;
-        prevBz = bz;
-        bz += stepZ;
+        // Z is dominant direction
+        if (tMaxZ <= tMaxX && tMaxZ <= tMaxY) {
+          t = tMaxZ;
+          tMaxZ += tDeltaZ;
+          bz += stepZ;
+        } else if (tMaxX <= tMaxY) {
+          t = tMaxX;
+          tMaxX += tDeltaX;
+          bx += stepX;
+        } else {
+          t = tMaxY;
+          tMaxY += tDeltaY;
+          by += stepY;
+        }
       }
 
       // Check if new position is solid
       if (this.chunkManager.isSolid(bx, by, bz)) {
-        // Determine which face we hit based on direction we came from
+        // Determine face based on which coordinate changed
         let face = 0;
         if (bx !== prevBx) {
-          face = bx > prevBx ? 4 : 5; // Hit from -X or +X
+          face = bx > prevBx ? 4 : 5;
         } else if (by !== prevBy) {
-          face = by > prevBy ? 1 : 0; // Hit from -Y or +Y
+          face = by > prevBy ? 1 : 0;
         } else if (bz !== prevBz) {
-          face = bz > prevBz ? 3 : 2; // Hit from -Z or +Z
+          face = bz > prevBz ? 3 : 2;
         }
+
         return { x: bx, y: by, z: bz, face };
       }
     }

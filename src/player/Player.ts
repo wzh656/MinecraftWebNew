@@ -59,6 +59,31 @@ export class Player {
     this.position.x = x;
     this.position.y = y;
     this.position.z = z;
+
+    // Check if the new position would place player inside solid blocks
+    // This can happen when loading a saved position where a block was placed
+    // or due to floating point precision issues
+    if (this.checkCollision(x, y, z)) {
+      // First, try small epsilon adjustments for floating point precision issues
+      // If player is just slightly inside the ground (y=4.99999 instead of y=5.0)
+      for (let epsilon = 0.01; epsilon <= 0.2; epsilon += 0.01) {
+        if (!this.checkCollision(x, y + epsilon, z)) {
+          this.position.y = y + epsilon;
+          this.updateCamera();
+          return;
+        }
+      }
+
+      // If small adjustments don't work, search for a valid position above
+      // This handles the case where player is buried under blocks
+      let adjustedY = Math.ceil(y); // Start from the next integer Y
+      const maxSearchHeight = adjustedY + 10; // Search up to 10 blocks up
+      while (adjustedY < maxSearchHeight && this.checkCollision(x, adjustedY, z)) {
+        adjustedY += 1.0; // Move up by 1 block until not colliding
+      }
+      this.position.y = adjustedY;
+    }
+
     this.updateCamera();
   }
 
