@@ -9,6 +9,7 @@ dist-ssr
 
 # Editor
 .vscode/*
+.claude/*
 !.vscode/extensions.json
 .idea
 *.suo
