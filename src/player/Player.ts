@@ -5,6 +5,9 @@ import {
   PLAYER_SPEED,
   GRAVITY,
   PLAYER_JUMP_SPEED,
+  PLAYER_WIDTH,
+  PLAYER_DEPTH,
+  WORLD_MIN_Y,
 } from '../utils/Constants';
 
 export class Player {
@@ -19,8 +22,8 @@ export class Player {
   private speed = PLAYER_SPEED;
   private jumpSpeed = PLAYER_JUMP_SPEED;
 
-  private width = 0.6;
-  private depth = 0.6;
+  private width = PLAYER_WIDTH;
+  private depth = PLAYER_DEPTH;
 
   constructor(renderer: Renderer, chunkManager: ChunkManager) {
     this.renderer = renderer;
@@ -104,7 +107,7 @@ export class Player {
     this.velocity.x *= 0.9;
     this.velocity.z *= 0.9;
 
-    if (this.position.y < -50) {
+    if (this.position.y < WORLD_MIN_Y) {
       this.position.y = 50;
       this.velocity.y = 0;
     }

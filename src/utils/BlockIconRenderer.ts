@@ -31,7 +31,8 @@ export class BlockIconRenderer {
     this.scene = new Scene();
 
     // Setup orthographic camera for isometric view
-    const frustumSize = 2.5;
+    // frustumSize determines how large the block appears in the icon
+    const frustumSize = 1.5;
     this.camera = new OrthographicCamera(
       -frustumSize / 2,
       frustumSize / 2,
@@ -40,7 +41,7 @@ export class BlockIconRenderer {
       0.1,
       100
     );
-    this.camera.position.set(2, 2, 2);
+    this.camera.position.set(1.8, 1.8, 1.8);
     this.camera.lookAt(0, 0, 0);
 
     // Setup renderer with transparent background

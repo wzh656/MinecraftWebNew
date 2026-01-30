@@ -7,6 +7,19 @@ import { Physics } from '../player/Physics';
 import { BlockType } from '../world/BlockType';
 import { BlockIconRenderer } from '../utils/BlockIconRenderer';
 import { SaveManager } from '../save/SaveManager';
+import {
+  PLAYER_INITIAL_X,
+  PLAYER_INITIAL_Y,
+  PLAYER_INITIAL_Z,
+  SAVE_INTERVAL_PLAYER,
+  BLOCK_BREAK_COOLDOWN,
+  BLOCK_PLACE_COOLDOWN,
+  RAYCAST_MAX_DISTANCE,
+  HOTBAR_SIZE,
+  PLAYER_WIDTH,
+  PLAYER_DEPTH,
+  PLAYER_HEIGHT,
+} from '../utils/Constants';
 
 export class Game {
   private renderer: Renderer;
@@ -23,7 +36,7 @@ export class Game {
   private blockIconRenderer: BlockIconRenderer | null = null;
   private saveManager: SaveManager | null = null;
   private lastSaveTime = 0;
-  private readonly saveInterval = 30000; // Save player position every 30 seconds
+  private readonly saveInterval = SAVE_INTERVAL_PLAYER;
 
   private blockTypes = [
     BlockType.STONE,
@@ -47,7 +60,7 @@ export class Game {
     this.physics = new Physics(chunkManager);
     this.player = new Player(this.renderer, chunkManager);
 
-    this.player.setPosition(8, 255, 8);
+    this.player.setPosition(PLAYER_INITIAL_X, PLAYER_INITIAL_Y, PLAYER_INITIAL_Z);
 
     // Listen for pointer lock changes to show/hide pause menu
     document.addEventListener('pointerlockchange', () => {
@@ -107,13 +120,21 @@ export class Game {
     this.ui.show();
     this.ui.setBlockTypes(this.blockTypes);
 
+    // Setup teleport callback
+    this.ui.setTeleportCallback((x, y, z) => {
+      this.player.setPosition(x, y, z);
+    });
+
     const loading = document.getElementById('loading');
     if (loading) {
       loading.classList.add('hidden');
     }
 
-    this.world.update(8, 8);
+    this.world.update(PLAYER_INITIAL_X, PLAYER_INITIAL_Z);
     this.ui.setHotbarSelection(0);
+
+    // Start game loop immediately
+    this.start();
   }
 
   start(): void {
@@ -138,6 +159,11 @@ export class Game {
     requestAnimationFrame(this.loop.bind(this));
   }
 
+  // FPS calculation (frames per second, updated once per second)
+  private fpsFrameCount = 0;
+  private fpsLastTime = performance.now();
+  private currentFps = 0;
+
   private update(delta: number): void {
     this.handleInput(delta);
     this.player.update(delta);
@@ -148,11 +174,29 @@ export class Game {
     this.handleBlockInteraction();
     this.handleHotbarSelection();
 
-    const fps = Math.round(1 / delta);
-    this.ui.updateDebugInfo(fps, pos);
+    // Update FPS (once per second)
+    this.fpsFrameCount++;
+    const now = performance.now();
+    if (now - this.fpsLastTime >= 1000) {
+      this.currentFps = this.fpsFrameCount;
+      this.fpsFrameCount = 0;
+      this.fpsLastTime = now;
+    }
+
+    // Get camera rotation for display
+    const rotation = this.renderer.getCameraRotation();
+
+    // Get raycast target for display
+    const raycastHit = this.raycast();
+
+    this.ui.updateDebugInfo({
+      fps: this.currentFps,
+      position: pos,
+      rotation: { x: rotation.x, y: rotation.y },
+      target: raycastHit,
+    });
 
     // Auto-save player position and rotation
-    const now = performance.now();
     if (now - this.lastSaveTime > this.saveInterval) {
       const rotation = this.renderer.getCameraRotation();
       this.world.getChunkManager().savePlayerPosition(pos, rotation);
@@ -206,8 +250,8 @@ export class Game {
 
   private lastBreakTime = 0;
   private lastPlaceTime = 0;
-  private readonly breakCooldown = 200;
-  private readonly placeCooldown = 200;
+  private readonly breakCooldown = BLOCK_BREAK_COOLDOWN;
+  private readonly placeCooldown = BLOCK_PLACE_COOLDOWN;
 
   private handleBlockInteraction(): void {
     // Don't process block interactions when paused or main menu is visible
@@ -229,7 +273,7 @@ export class Game {
 
   private handleHotbarSelection(): void {
     // Handle number keys
-    for (let i = 1; i <= 9; i++) {
+    for (let i = 1; i <= HOTBAR_SIZE; i++) {
       if (this.input.isKeyDown(`Digit${i}`)) {
         this.selectedSlot = i - 1;
         this.selectedBlock = this.blockTypes[this.selectedSlot] ?? BlockType.STONE;
@@ -269,23 +313,17 @@ export class Game {
   private raycast(): { x: number; y: number; z: number; face: number } | null {
     const pos = this.renderer.getCameraPosition();
     const forward = this.renderer.getForwardVector();
-    const maxDistance = 5;
 
-    // Start raycast slightly in front of camera to avoid detecting blocks camera is inside
-    // This can happen when player is very close to a block (e.g., after moving forward)
-    const startOffset = 0.1;
-    const startX = pos.x + forward.x * startOffset;
-    const startY = pos.y + forward.y * startOffset;
-    const startZ = pos.z + forward.z * startOffset;
-
+    // Use DDA raycast starting from camera position
+    // The DDA algorithm handles edge cases properly (including when camera is inside a block)
     return this.physics.raycast(
-      startX,
-      startY,
-      startZ,
+      pos.x,
+      pos.y,
+      pos.z,
       forward.x,
       forward.y,
       forward.z,
-      maxDistance
+      RAYCAST_MAX_DISTANCE
     );
   }
 
@@ -311,18 +349,13 @@ export class Game {
     // Check if placing a block at (x, y, z) would intersect with the player's AABB
     const pos = this.player.getPosition();
 
-    // Player dimensions (same as in Player.ts)
-    const width = 0.6;
-    const depth = 0.6;
-    const height = 1.8;
-
     // Player AABB
-    const playerMinX = pos.x - width / 2;
-    const playerMaxX = pos.x + width / 2;
+    const playerMinX = pos.x - PLAYER_WIDTH / 2;
+    const playerMaxX = pos.x + PLAYER_WIDTH / 2;
     const playerMinY = pos.y;
-    const playerMaxY = pos.y + height;
-    const playerMinZ = pos.z - depth / 2;
-    const playerMaxZ = pos.z + depth / 2;
+    const playerMaxY = pos.y + PLAYER_HEIGHT;
+    const playerMinZ = pos.z - PLAYER_DEPTH / 2;
+    const playerMaxZ = pos.z + PLAYER_DEPTH / 2;
 
     // Block AABB (block at x, y, z occupies [x, x+1] x [y, y+1] x [z, z+1])
     const blockMinX = x;
@@ -358,6 +391,14 @@ export class Game {
   showPauseMenu(): void {
     this.ui.showPauseMenu();
     this.input.unlockPointer();
+  }
+
+  showInitialPauseMenu(): void {
+    // Initial state: show pause menu but don't start game loop yet
+    // Wait for player to click Resume Game to lock pointer and start
+    this.pauseMenuVisible = true;
+    this.ui.showPauseMenu();
+    // Don't lock pointer yet - wait for Resume button click
   }
 
   hidePauseMenu(): void {
@@ -417,7 +458,7 @@ export class Game {
     if (savedPosition) {
       this.player.setPosition(savedPosition.x, savedPosition.y, savedPosition.z);
     } else {
-      this.player.setPosition(8, 255, 8);
+      this.player.setPosition(PLAYER_INITIAL_X, PLAYER_INITIAL_Y, PLAYER_INITIAL_Z);
     }
 
     const savedRotation = await this.world.getChunkManager().loadPlayerRotation();

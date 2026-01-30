@@ -68,7 +68,9 @@ async function startGame(worldName: string): Promise<void> {
 
   try {
     await currentGame.initialize(worldName);
-    currentGame.start();
+    // Don't start game loop yet - show pause menu first
+    // Player needs to click "Resume Game" to lock pointer and start
+    currentGame.showInitialPauseMenu();
   } catch (error) {
     console.error('Failed to start game:', error);
     returnToMainMenu();

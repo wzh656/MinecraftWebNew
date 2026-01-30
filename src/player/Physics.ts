@@ -12,6 +12,10 @@ export interface AABB {
 export class Physics {
   constructor(private chunkManager: ChunkManager) {}
 
+  /**
+   * DDA (Digital Differential Analyzer) raycast algorithm
+   * Accurately finds the first solid block intersected by the ray
+   */
   raycast(
     originX: number,
     originY: number,
@@ -21,7 +25,6 @@ export class Physics {
     dirZ: number,
     maxDistance: number
   ): { x: number; y: number; z: number; face: number } | null {
-    // console.log('raycast origin:', originX, originY, originZ, 'dir:', dirX, dirY, dirZ);
     if (dirX === 0 && dirY === 0 && dirZ === 0) return null;
 
     // Normalize direction
@@ -30,77 +33,87 @@ export class Physics {
     const ndy = dirY / len;
     const ndz = dirZ / len;
 
-    // Small step size for precision
-    const stepSize = 0.05;
-    const steps = Math.ceil(maxDistance / stepSize);
+    // Current block coordinates
+    let bx = Math.floor(originX);
+    let by = Math.floor(originY);
+    let bz = Math.floor(originZ);
 
-    // Calculate starting block (the block containing the origin)
-    let prevX = Math.floor(originX);
-    let prevY = Math.floor(originY);
-    let prevZ = Math.floor(originZ);
+    // Step direction (-1 or 1)
+    const stepX = ndx > 0 ? 1 : -1;
+    const stepY = ndy > 0 ? 1 : -1;
+    const stepZ = ndz > 0 ? 1 : -1;
 
-    // Skip the starting block - we shouldn't detect collision with the block we're inside
-    // Use a larger initial offset to ensure we're outside the starting block
-    // This prevents "mining through" issues when player is close to blocks
-    let startOffset = 0.5; // Minimum distance to move before checking blocks
-    let foundStart = false;
+    // Distance to next voxel boundary
+    const nextBoundaryX = ndx > 0 ? bx + 1 : bx;
+    const nextBoundaryY = ndy > 0 ? by + 1 : by;
+    const nextBoundaryZ = ndz > 0 ? bz + 1 : bz;
 
-    while (startOffset < maxDistance) {
-      const t = startOffset;
-      const x = originX + ndx * t;
-      const y = originY + ndy * t;
-      const z = originZ + ndz * t;
+    // tMax: distance along ray to next boundary
+    let tMaxX = ndx !== 0 ? (nextBoundaryX - originX) / ndx : Infinity;
+    let tMaxY = ndy !== 0 ? (nextBoundaryY - originY) / ndy : Infinity;
+    let tMaxZ = ndz !== 0 ? (nextBoundaryZ - originZ) / ndz : Infinity;
 
-      const bx = Math.floor(x);
-      const by = Math.floor(y);
-      const bz = Math.floor(z);
+    // tDelta: distance between voxel boundaries
+    const tDeltaX = ndx !== 0 ? Math.abs(1 / ndx) : Infinity;
+    const tDeltaY = ndy !== 0 ? Math.abs(1 / ndy) : Infinity;
+    const tDeltaZ = ndz !== 0 ? Math.abs(1 / ndz) : Infinity;
 
-      // If we've moved to a different block, that's where we start checking
-      if (bx !== prevX || by !== prevY || bz !== prevZ) {
-        prevX = bx;
-        prevY = by;
-        prevZ = bz;
-        foundStart = true;
-        break;
+    // First check: is the starting position inside a solid block?
+    // If so, return that block immediately (player is stuck)
+    if (this.chunkManager.isSolid(bx, by, bz)) {
+      // Determine which face the ray is exiting from
+      // This is approximate - we use the direction as hint
+      let face = 0;
+      const absX = Math.abs(ndx);
+      const absY = Math.abs(ndy);
+      const absZ = Math.abs(ndz);
+      if (absX >= absY && absX >= absZ) {
+        face = ndx > 0 ? 4 : 5; // Exiting from -X or +X face
+      } else if (absY >= absX && absY >= absZ) {
+        face = ndy > 0 ? 1 : 0; // Exiting from -Y or +Y face
+      } else {
+        face = ndz > 0 ? 3 : 2; // Exiting from -Z or +Z face
       }
-
-      startOffset += stepSize;
+      return { x: bx, y: by, z: bz, face };
     }
 
-    if (!foundStart) return null;
+    // DDA traversal
+    let t = 0;
+    let prevBx = bx;
+    let prevBy = by;
+    let prevBz = bz;
 
-    for (let i = Math.ceil(startOffset / stepSize); i < steps; i++) {
-      const t = i * stepSize;
-      const x = originX + ndx * t;
-      const y = originY + ndy * t;
-      const z = originZ + ndz * t;
+    while (t < maxDistance) {
+      // Move to next voxel
+      if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+        t = tMaxX;
+        tMaxX += tDeltaX;
+        prevBx = bx;
+        bx += stepX;
+      } else if (tMaxY < tMaxZ) {
+        t = tMaxY;
+        tMaxY += tDeltaY;
+        prevBy = by;
+        by += stepY;
+      } else {
+        t = tMaxZ;
+        tMaxZ += tDeltaZ;
+        prevBz = bz;
+        bz += stepZ;
+      }
 
-      const bx = Math.floor(x);
-      const by = Math.floor(y);
-      const bz = Math.floor(z);
-
-      // Check if we moved to a new block
-      if (bx !== prevX || by !== prevY || bz !== prevZ) {
-        // Check if the new block is solid
-        const solid = this.chunkManager.isSolid(bx, by, bz);
-        // console.log('Checking block', bx, by, bz, 'solid:', solid, 'from prev', prevX, prevY, prevZ);
-        if (solid) {
-          // Determine which face we hit by looking at the direction we came from
-          let face = 0;
-          if (bx > prevX) face = 4; // Left face (hit from -X)
-          else if (bx < prevX) face = 5; // Right face (hit from +X)
-          else if (by > prevY) face = 1; // Bottom face (hit from -Y)
-          else if (by < prevY) face = 0; // Top face (hit from +Y)
-          else if (bz > prevZ) face = 3; // Back face (hit from -Z)
-          else if (bz < prevZ) face = 2; // Front face (hit from +Z)
-
-          // console.log('Hit solid block at', bx, by, bz, 'face', face);
-          return { x: bx, y: by, z: bz, face };
+      // Check if new position is solid
+      if (this.chunkManager.isSolid(bx, by, bz)) {
+        // Determine which face we hit based on direction we came from
+        let face = 0;
+        if (bx !== prevBx) {
+          face = bx > prevBx ? 4 : 5; // Hit from -X or +X
+        } else if (by !== prevBy) {
+          face = by > prevBy ? 1 : 0; // Hit from -Y or +Y
+        } else if (bz !== prevBz) {
+          face = bz > prevBz ? 3 : 2; // Hit from -Z or +Z
         }
-
-        prevX = bx;
-        prevY = by;
-        prevZ = bz;
+        return { x: bx, y: by, z: bz, face };
       }
     }
 

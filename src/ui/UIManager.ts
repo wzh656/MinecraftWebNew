@@ -1,3 +1,5 @@
+import { HOTBAR_SIZE, BLOCK_ICON_SIZE } from '../utils/Constants';
+
 export class UIManager {
   private container: HTMLElement;
   private crosshair: HTMLElement | null = null;
@@ -386,13 +388,15 @@ export class UIManager {
       pointer-events: none;
     `;
 
-    for (let i = 0; i < 9; i++) {
+    const iconDisplaySize = BLOCK_ICON_SIZE * 0.75; // 36px for 48px slot
+
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
       const slot = document.createElement('div');
       slot.className = 'hotbar-slot';
       slot.dataset.index = i.toString();
       slot.style.cssText = `
-        width: 48px;
-        height: 48px;
+        width: ${BLOCK_ICON_SIZE}px;
+        height: ${BLOCK_ICON_SIZE}px;
         background: rgba(0, 0, 0, 0.5);
         border: 2px solid #555;
         display: flex;
@@ -403,8 +407,8 @@ export class UIManager {
       const iconContainer = document.createElement('div');
       iconContainer.className = 'icon-container';
       iconContainer.style.cssText = `
-        width: 36px;
-        height: 36px;
+        width: ${iconDisplaySize}px;
+        height: ${iconDisplaySize}px;
         margin: auto;
         position: relative;
       `;
@@ -412,8 +416,8 @@ export class UIManager {
       const icon = document.createElement('img');
       icon.className = 'block-icon-img';
       icon.style.cssText = `
-        width: 36px;
-        height: 36px;
+        width: ${iconDisplaySize}px;
+        height: ${iconDisplaySize}px;
         image-rendering: pixelated;
         display: none;
         position: absolute;
@@ -424,8 +428,8 @@ export class UIManager {
       const fallback = document.createElement('div');
       fallback.className = 'block-icon-fallback';
       fallback.style.cssText = `
-        width: 36px;
-        height: 36px;
+        width: ${iconDisplaySize}px;
+        height: ${iconDisplaySize}px;
         background-color: ${this.getBlockColor(this.blockTypes[i])};
         border: 1px solid #333;
         position: absolute;
@@ -498,13 +502,166 @@ export class UIManager {
     this.container.appendChild(this.debugInfo);
   }
 
-  updateDebugInfo(fps: number, position: { x: number; y: number; z: number }): void {
+  private onTeleportCallback: ((x: number, y: number, z: number) => void) | null = null;
+
+  setTeleportCallback(callback: (x: number, y: number, z: number) => void): void {
+    this.onTeleportCallback = callback;
+  }
+
+  updateDebugInfo(info: {
+    fps: number;
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number };
+    target: { x: number; y: number; z: number; face: number } | null;
+  }): void {
     if (this.debugInfo) {
+      const yaw = (info.rotation.y * 180 / Math.PI) % 360;
+      const pitch = (info.rotation.x * 180 / Math.PI);
+      const targetStr = info.target
+        ? `${info.target.x}, ${info.target.y}, ${info.target.z} (face: ${info.target.face})`
+        : 'none';
+
       this.debugInfo.innerHTML = `
-        FPS: ${fps}<br>
-        Pos: ${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}
+        <div>FPS: ${info.fps}</div>
+        <div>Pos: ${info.position.x.toFixed(2)}, ${info.position.y.toFixed(2)}, ${info.position.z.toFixed(2)}</div>
+        <div>Yaw: ${yaw.toFixed(1)}°, Pitch: ${pitch.toFixed(1)}°</div>
+        <div>Target: ${targetStr}</div>
+        <button id="teleport-btn" style="
+          margin-top: 8px;
+          padding: 4px 8px;
+          font-size: 11px;
+          background: #555;
+          color: white;
+          border: 1px solid #777;
+          cursor: pointer;
+          pointer-events: auto;
+        ">Teleport</button>
       `;
+
+      // Add teleport button event listener
+      const teleportBtn = this.debugInfo.querySelector('#teleport-btn');
+      if (teleportBtn) {
+        teleportBtn.addEventListener('click', () => {
+          this.showTeleportDialog(info.position);
+        });
+      }
     }
+  }
+
+  private showTeleportDialog(currentPos: { x: number; y: number; z: number }): void {
+    // Remove existing dialog if any
+    const existingDialog = document.getElementById('teleport-dialog');
+    if (existingDialog) {
+      existingDialog.remove();
+    }
+
+    const dialog = document.createElement('div');
+    dialog.id = 'teleport-dialog';
+    dialog.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid #555;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    `;
+
+    const title = document.createElement('div');
+    title.textContent = 'Teleport to coordinates';
+    title.style.cssText = 'color: white; font-family: monospace; font-size: 14px;';
+
+    const inputContainer = document.createElement('div');
+    inputContainer.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+
+    const createInput = (label: string, value: number) => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display: flex; flex-direction: column; gap: 2px;';
+
+      const lbl = document.createElement('label');
+      lbl.textContent = label;
+      lbl.style.cssText = 'color: #aaa; font-size: 10px;';
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.1';
+      input.value = value.toFixed(2);
+      input.style.cssText = `
+        width: 80px;
+        padding: 4px;
+        font-size: 12px;
+        background: #333;
+        color: white;
+        border: 1px solid #555;
+        font-family: monospace;
+      `;
+
+      wrapper.appendChild(lbl);
+      wrapper.appendChild(input);
+      return { wrapper, input };
+    };
+
+    const xInput = createInput('X', currentPos.x);
+    const yInput = createInput('Y', currentPos.y);
+    const zInput = createInput('Z', currentPos.z);
+
+    inputContainer.appendChild(xInput.wrapper);
+    inputContainer.appendChild(yInput.wrapper);
+    inputContainer.appendChild(zInput.wrapper);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; gap: 8px; justify-content: center; margin-top: 10px;';
+
+    const teleportBtn = document.createElement('button');
+    teleportBtn.textContent = 'Teleport';
+    teleportBtn.style.cssText = `
+      padding: 6px 16px;
+      font-size: 12px;
+      background: #4a4;
+      color: white;
+      border: 1px solid #5b5;
+      cursor: pointer;
+      font-family: monospace;
+    `;
+    teleportBtn.addEventListener('click', () => {
+      const x = parseFloat(xInput.input.value);
+      const y = parseFloat(yInput.input.value);
+      const z = parseFloat(zInput.input.value);
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        this.onTeleportCallback?.(x, y, z);
+      }
+      dialog.remove();
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      padding: 6px 16px;
+      font-size: 12px;
+      background: #555;
+      color: white;
+      border: 1px solid #777;
+      cursor: pointer;
+      font-family: monospace;
+    `;
+    cancelBtn.addEventListener('click', () => {
+      dialog.remove();
+    });
+
+    buttonContainer.appendChild(teleportBtn);
+    buttonContainer.appendChild(cancelBtn);
+
+    dialog.appendChild(title);
+    dialog.appendChild(inputContainer);
+    dialog.appendChild(buttonContainer);
+
+    this.container.appendChild(dialog);
   }
 
   show(): void {
