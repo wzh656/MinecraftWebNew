@@ -59,3 +59,33 @@ export const FACE_OFFSETS = [
   [-1, 0, 0],
   [1, 0, 0],
 ] as const;
+
+// Time-related constants (milliseconds)
+export const MS_PER_SECOND = 1000;
+export const FPS_UPDATE_INTERVAL = 1000;
+
+// Mouse sensitivity factor
+export const MOUSE_SENSITIVITY_FACTOR = 0.002;
+
+// Loading progress percentages
+export const LOADING_PROGRESS_INIT = 0;
+export const LOADING_PROGRESS_SAVE = 20;
+export const LOADING_PROGRESS_ICONS = 40;
+export const LOADING_PROGRESS_CHUNKS = 60;
+export const LOADING_PROGRESS_COMPLETE = 100;
+
+// Chunk loading timeout
+export const CHUNK_LOAD_TIMEOUT = 30000;
+export const CHUNK_LOAD_CHECK_INTERVAL = 100;
+export const CHUNK_LOAD_DELAY = 500;
+
+// Delta time cap (seconds)
+export const MAX_DELTA_TIME = 0.1;
+
+// Physics constants
+export const VELOCITY_DAMPING = 0.9;
+export const POSITION_SEARCH_EPSILON_START = 0.01;
+export const POSITION_SEARCH_EPSILON_END = 0.2;
+export const POSITION_SEARCH_EPSILON_STEP = 0.01;
+export const MAX_POSITION_SEARCH_HEIGHT = 10;
+export const TELEPORT_Y_POSITION = 50;
