@@ -78,10 +78,14 @@ export class World {
     this.playerPosition.x = playerX;
     this.playerPosition.z = playerZ;
 
-    const { unloaded, cached, uncached } =
-      this.chunkManager.updateVisibleChunks(playerX, playerZ, playerYaw);
+    const { startRendering, stopRendering } = this.chunkManager.updateChunks(
+      playerX,
+      playerZ,
+      playerYaw,
+    );
 
-    for (const key of unloaded) {
+    // Stop rendering chunks that moved out of render distance + buffer
+    for (const key of stopRendering) {
       this.meshBuilder.removeChunkMesh(key, this.scene);
       this.meshBuilder.getFadeManager().stopFade(key);
 
@@ -91,16 +95,8 @@ export class World {
       );
     }
 
-    for (const key of cached) {
-      this.meshBuilder.removeChunkMesh(key, this.scene);
-
-      const [cx, cz] = key.split(",").map(Number);
-      this.meshUpdateQueue = this.meshUpdateQueue.filter(
-        (q) => q.chunk.x !== cx || q.chunk.z !== cz,
-      );
-    }
-
-    for (const key of uncached) {
+    // Mark new visible chunks for rendering
+    for (const key of startRendering) {
       const chunk = this.chunkManager.getChunk(
         parseInt(key.split(",")[0]),
         parseInt(key.split(",")[1]),
@@ -153,6 +149,10 @@ export class World {
 
   getChunkManager(): ChunkManager {
     return this.chunkManager;
+  }
+
+  isChunkRendered(cx: number, cz: number): boolean {
+    return this.meshBuilder.hasChunkMesh(cx, cz);
   }
 
   getTextureLoader(): TextureLoader {

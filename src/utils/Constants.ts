@@ -76,7 +76,7 @@ export const LOADING_PROGRESS_COMPLETE = 100;
 
 // Chunk loading timeout
 export const CHUNK_LOAD_TIMEOUT = 30000;
-export const CHUNK_LOAD_CHECK_INTERVAL = 100;
+export const CHUNK_LOAD_CHECK_INTERVAL = 400;
 export const CHUNK_LOAD_DELAY = 500;
 
 // Delta time cap (seconds)

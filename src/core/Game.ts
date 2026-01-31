@@ -21,7 +21,6 @@ import {
   PLAYER_HEIGHT,
   MS_PER_SECOND,
   FPS_UPDATE_INTERVAL,
-  MOUSE_SENSITIVITY_FACTOR,
   LOADING_PROGRESS_INIT,
   LOADING_PROGRESS_SAVE,
   LOADING_PROGRESS_ICONS,
@@ -115,7 +114,8 @@ export class Game {
 
     this.world.getChunkManager().setSaveManager(this.saveManager);
 
-    // Load player position and rotation if available
+    this.applySettings(settings.values);
+
     const savedPosition = await this.world
       .getChunkManager()
       .loadPlayerPosition();
@@ -198,49 +198,42 @@ export class Game {
   ): Promise<void> {
     this.updateLoadingStatus("Loading chunks...", LOADING_PROGRESS_CHUNKS);
 
-    // Trigger chunk loading
-    this.world.update(playerX, playerZ);
-
-    // Wait for all visible chunks to be fully loaded
     const chunkManager = this.world.getChunkManager();
     const maxWaitTime = CHUNK_LOAD_TIMEOUT;
     const startTime = performance.now();
 
     while (performance.now() - startTime < maxWaitTime) {
-      const visibleChunks = Array.from(chunkManager.getVisibleChunks());
-      const totalChunks = visibleChunks.length;
+      this.world.update(playerX, playerZ);
 
-      if (totalChunks === 0) {
-        await this.delay(CHUNK_LOAD_CHECK_INTERVAL);
-        continue;
+      const visibleChunks = Array.from(chunkManager.getVisibleChunks());
+      const totalVisible = visibleChunks.length;
+
+      let loadedCount = 0;
+      let renderedCount = 0;
+      for (const chunk of visibleChunks) {
+        const hasData = chunk.data.some((b) => b !== 0);
+        if (hasData) loadedCount++;
+
+        const isRendered = this.world.isChunkRendered(chunk.x, chunk.z);
+        if (isRendered) renderedCount++;
       }
 
-      // Check how many chunks have been fully loaded (have data)
-      const loadedChunks = visibleChunks.filter((chunk) => {
-        // A chunk is considered loaded if it has been initialized with data
-        // We check if any non-air block exists by sampling
-        for (let i = 0; i < chunk.data.length; i++) {
-          if (chunk.data[i] !== 0) return true;
-        }
-        return false;
-      }).length;
+      const hasPending = chunkManager.hasPendingChunks();
 
       const progress =
-        LOADING_PROGRESS_CHUNKS + Math.floor((loadedChunks / totalChunks) * 35);
+        LOADING_PROGRESS_CHUNKS +
+        Math.floor((renderedCount / totalVisible) * 35);
       this.updateLoadingStatus(
-        `Loading chunks... (${loadedChunks}/${totalChunks})`,
-        progress,
+        `Loading chunks... (${renderedCount}/${totalVisible} rendered)${hasPending ? " (generating...)" : ""}`,
+        Math.min(progress, LOADING_PROGRESS_COMPLETE - 1),
       );
 
-      if (loadedChunks >= totalChunks) {
-        // All chunks loaded, give a moment for mesh generation
+      if (renderedCount >= totalVisible && !hasPending && totalVisible > 0) {
         await this.delay(CHUNK_LOAD_DELAY);
         break;
       }
 
       await this.delay(CHUNK_LOAD_CHECK_INTERVAL);
-      // Continue updating world to trigger async loading
-      this.world.update(playerX, playerZ);
     }
   }
 
@@ -404,8 +397,8 @@ export class Game {
     const mouseDelta = this.input.getMouseDelta();
     if (this.input.isLocked() && (mouseDelta.dx !== 0 || mouseDelta.dy !== 0)) {
       this.renderer.rotateCamera(
-        -mouseDelta.dx * MOUSE_SENSITIVITY_FACTOR,
-        -mouseDelta.dy * MOUSE_SENSITIVITY_FACTOR,
+        -mouseDelta.dx * settings.mouseSensitivity,
+        -mouseDelta.dy * settings.mouseSensitivity,
       );
     }
 

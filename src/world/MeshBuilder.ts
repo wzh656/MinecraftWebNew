@@ -58,6 +58,11 @@ export class MeshBuilder {
     return `${cx},${cz}`;
   }
 
+  hasChunkMesh(cx: number, cz: number): boolean {
+    const key = this.getChunkKey(cx, cz);
+    return this.chunkMeshes.has(key);
+  }
+
   updateChunkMesh(
     chunk: Chunk,
     scene: Scene,

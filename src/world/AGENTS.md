@@ -33,10 +33,32 @@ Chunk storage, terrain generation, mesh building. Core world data layer.
 ### ChunkManager
 
 - Manages loaded chunks around player
-- Distance tiers:
-  - Render: `RENDER_DISTANCE = 8` (visible, meshed)
-  - Cache: `CACHE_DISTANCE = 12` (data only, no mesh)
-- Load: IndexedDB first, TerrainGenerator fallback
+
+**Core Concepts:**
+
+- **Render**: Chunk is visible in scene (has mesh)
+- **Unload**: Remove from scene (no longer visible), but data may stay in memory
+- **Cache**: Data is in memory (Uint8Array), but not necessarily visible
+- **Release**: Delete data from memory
+
+**Distance Tiers:**
+
+- **Render Distance**: Chunks that SHOULD be rendered (visible, meshed)
+- **Cache Distance**: Chunks that SHOULD have data cached in memory
+- **Render Buffer**: Extra buffer for deciding when to stop rendering
+  - Chunks beyond `Render Distance + Buffer` are unloaded from view
+  - This prevents flickering when player moves at chunk boundaries
+
+**Operations:**
+
+1. `startRendering`: Chunks in Render Distance but not currently visible
+2. `stopRendering`: Chunks currently visible but beyond Render Distance + Buffer
+3. `startCaching`: Chunks in Cache Distance but not currently cached
+4. `releaseMemory`: Chunks currently cached but beyond Cache Distance
+
+**Implementation:**
+
+- Load: IndexedDB first, TerrainGenerator via Worker
 - Save: 5-second debounce via `scheduleSave()`
 - Cross-chunk: marks neighbors on edge block changes
 

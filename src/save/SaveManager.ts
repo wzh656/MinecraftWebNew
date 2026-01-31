@@ -207,7 +207,6 @@ export class SaveManager {
   async deleteWorld(worldName: string): Promise<void> {
     if (!this.db) throw new Error("Database not initialized");
 
-    // Delete all chunks for this world
     const chunks = await this.getAllChunksForWorld(worldName);
 
     return new Promise((resolve, reject) => {
@@ -216,15 +215,53 @@ export class SaveManager {
         "readwrite",
       );
 
-      // Delete chunks
       const chunkStore = transaction.objectStore(CHUNK_STORE);
       for (const chunk of chunks) {
         chunkStore.delete(`${worldName}:${chunk.cx},${chunk.cz}`);
       }
 
-      // Delete metadata
       const metaStore = transaction.objectStore(META_STORE);
       metaStore.delete(worldName);
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async renameWorld(oldName: string, newName: string): Promise<void> {
+    if (!this.db) throw new Error("Database not initialized");
+
+    const metadata = await this.getWorldMetadata(oldName);
+    if (!metadata) throw new Error(`World "${oldName}" not found`);
+
+    const chunks = await this.getAllChunksForWorld(oldName);
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(
+        [CHUNK_STORE, META_STORE],
+        "readwrite",
+      );
+
+      const chunkStore = transaction.objectStore(CHUNK_STORE);
+      for (const chunk of chunks) {
+        const oldKey = `${oldName}:${chunk.cx},${chunk.cz}`;
+        const newKey = `${newName}:${chunk.cx},${chunk.cz}`;
+        const getRequest = chunkStore.get(oldKey);
+        getRequest.onsuccess = () => {
+          const data = getRequest.result;
+          if (data) {
+            data.key = newKey;
+            data.worldName = newName;
+            chunkStore.put(data);
+            chunkStore.delete(oldKey);
+          }
+        };
+      }
+
+      const metaStore = transaction.objectStore(META_STORE);
+      metaStore.delete(oldName);
+      metadata.name = newName;
+      metaStore.put(metadata);
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

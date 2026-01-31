@@ -33,7 +33,7 @@ export class UIManager {
     onWorldSelect?: (worldName: string) => void;
     onWorldCreate?: (worldName: string, seed: string) => void;
     onWorldDelete?: (worldName: string) => void;
-    onWorldEdit?: (worldName: string) => void;
+    onWorldEdit?: (worldName: string, newName: string) => void;
     onSinglePlayer?: () => void;
     onOptions?: () => void;
     onExit?: () => void;
@@ -171,10 +171,12 @@ export class UIManager {
     );
 
     const editBtn = this.createMenuButton(
-      "编辑",
+      "重命名",
       () => {
         if (this.selectedWorld) {
-          this.callbacks.onWorldEdit?.(this.selectedWorld);
+          this.showEditWorldDialog(this.selectedWorld, (newName) => {
+            this.callbacks.onWorldEdit?.(this.selectedWorld!, newName);
+          });
         }
       },
       "mc-button-small",
@@ -367,6 +369,72 @@ export class UIManager {
     content.appendChild(buttonRow);
     dialog.appendChild(content);
     this.uiLayer!.appendChild(dialog);
+  }
+
+  showEditWorldDialog(
+    worldName: string,
+    onConfirm: (newName: string) => void,
+  ): void {
+    const dialog = document.createElement("div");
+    dialog.className = "mc-dialog-overlay";
+
+    const content = document.createElement("div");
+    content.className = "mc-dialog";
+    content.style.width = "400px";
+
+    const title = document.createElement("div");
+    title.className = "mc-dialog-title";
+    title.textContent = "重命名世界";
+
+    const label = document.createElement("div");
+    label.className = "mc-label";
+    label.textContent = "新世界名称:";
+    label.style.marginTop = "16px";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "mc-input";
+    input.style.width = "100%";
+    input.style.marginTop = "4px";
+    input.value = worldName;
+    input.placeholder = "输入新的世界名称";
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "mc-dialog-buttons";
+    buttonRow.style.marginTop = "24px";
+
+    const confirmBtn = this.createMenuButton(
+      "确认",
+      () => {
+        const newName = input.value.trim();
+        if (newName && newName !== worldName) {
+          onConfirm(newName);
+        }
+        dialog.remove();
+      },
+      "mc-button-small",
+    );
+
+    const cancelBtn = this.createMenuButton(
+      "取消",
+      () => {
+        dialog.remove();
+      },
+      "mc-button-small",
+    );
+
+    buttonRow.appendChild(confirmBtn);
+    buttonRow.appendChild(cancelBtn);
+
+    content.appendChild(title);
+    content.appendChild(label);
+    content.appendChild(input);
+    content.appendChild(buttonRow);
+    dialog.appendChild(content);
+    this.uiLayer!.appendChild(dialog);
+
+    input.focus();
+    input.select();
   }
 
   // ===== 选项菜单 =====

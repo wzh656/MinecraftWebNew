@@ -19,40 +19,25 @@ interface WorkerResponse {
 }
 
 export class WorkerTerrainManager {
-  private worker: Worker | null = null;
+  private worker: Worker;
   private pendingChunks = new Map<string, PendingChunk>();
   private generationQueue: PendingChunk[] = [];
   private isProcessingQueue = false;
   private maxConcurrentGenerations = 4;
   private activeGenerations = 0;
-  private workerSupported: boolean;
   private playerPosition = { x: 0, z: 0 };
   private playerDirection = { x: 0, z: 0 };
 
   constructor() {
-    this.workerSupported = typeof Worker !== "undefined";
-    if (this.workerSupported) {
-      this.initWorker();
-    }
-  }
-
-  private initWorker(): void {
-    try {
-      this.worker = new Worker(
-        new URL("./terrain.worker.ts", import.meta.url),
-        { type: "module" },
-      );
-      this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-        this.handleWorkerMessage(e.data);
-      };
-      this.worker.onerror = (err) => {
-        console.error("Terrain worker error:", err);
-        this.fallbackToMainThread();
-      };
-    } catch (err) {
-      console.warn("Failed to initialize terrain worker:", err);
-      this.workerSupported = false;
-    }
+    this.worker = new Worker(new URL("./terrain.worker.ts", import.meta.url), {
+      type: "module",
+    });
+    this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      this.handleWorkerMessage(e.data);
+    };
+    this.worker.onerror = (err) => {
+      console.error("Terrain worker error:", err);
+    };
   }
 
   private handleWorkerMessage(response: WorkerResponse): void {
@@ -74,18 +59,6 @@ export class WorkerTerrainManager {
 
     this.pendingChunks.delete(key);
     this.processQueue();
-  }
-
-  private fallbackToMainThread(): void {
-    console.warn("Falling back to main thread terrain generation");
-    this.workerSupported = false;
-    this.worker?.terminate();
-    this.worker = null;
-
-    for (const [, pending] of this.pendingChunks) {
-      pending.reject(new Error("Worker failed, fallback not yet implemented"));
-    }
-    this.pendingChunks.clear();
   }
 
   updatePlayerContext(
@@ -159,11 +132,7 @@ export class WorkerTerrainManager {
   }
 
   private processQueue(): void {
-    if (!this.workerSupported || !this.worker) {
-      void this.processFallback();
-      return;
-    }
-
+    if (!this.worker) return;
     if (this.isProcessingQueue) return;
     this.isProcessingQueue = true;
 
@@ -189,32 +158,8 @@ export class WorkerTerrainManager {
     this.isProcessingQueue = false;
   }
 
-  private async processFallback(): Promise<void> {
-    const { TerrainGenerator } = await import("./TerrainGenerator");
-    const generator = new TerrainGenerator();
-
-    while (this.generationQueue.length > 0) {
-      const pending = this.generationQueue.shift();
-      if (!pending) continue;
-
-      try {
-        const generated = generator.generateChunk(pending.cx, pending.cz);
-        pending.chunk.data.set(generated.data);
-        pending.chunk.needsUpdate = true;
-        pending.resolve();
-      } catch (err) {
-        pending.reject(err instanceof Error ? err : new Error(String(err)));
-      }
-
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-    }
-  }
-
   terminate(): void {
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-    }
+    this.worker.terminate();
 
     for (const pending of this.generationQueue) {
       pending.reject(new Error("Worker terminated"));
@@ -227,10 +172,6 @@ export class WorkerTerrainManager {
     this.generationQueue = [];
     this.pendingChunks.clear();
     this.activeGenerations = 0;
-  }
-
-  isWorkerSupported(): boolean {
-    return this.workerSupported;
   }
 
   getQueueLength(): number {

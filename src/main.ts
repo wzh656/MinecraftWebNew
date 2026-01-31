@@ -70,9 +70,17 @@ function setupUICallbacks(): void {
       await saveManager?.deleteWorld(worldName);
       await updateWorldList();
     },
-    onWorldEdit: (worldName: string) => {
-      console.log("Edit world:", worldName);
-      // TODO: 实现世界编辑（重命名等）
+    onWorldEdit: async (worldName: string, newName: string) => {
+      if (!saveManager) return;
+
+      const worlds = await saveManager.listWorlds();
+      if (worlds.some((w) => w.name === newName)) {
+        alert(`世界 "${newName}" 已存在`);
+        return;
+      }
+
+      await saveManager.renameWorld(worldName, newName);
+      await updateWorldList();
     },
 
     // 暂停菜单
@@ -107,10 +115,9 @@ async function createNewWorld(worldName: string, _seed: string): Promise<void> {
     return;
   }
 
-  // 保存种子到世界元数据
+  saveManager.setCurrentWorld(worldName);
   await saveManager.savePlayerPosition({ x: 8, y: 255, z: 8 });
 
-  // 开始游戏
   await startGame(worldName);
 }
 

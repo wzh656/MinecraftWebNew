@@ -11,13 +11,19 @@ import {
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
   private workerManager = new WorkerTerrainManager();
-  private visibleChunks = new Set<string>();
-  private cachedChunks = new Set<string>();
   private saveManager: SaveManager | null = null;
   private pendingSaves = new Set<string>();
   private saveTimeout: number | null = null;
+
+  // Current state tracking
+  private renderedChunks = new Set<string>(); // Actually being rendered (has mesh) - includes buffer zone
+  private cachedChunks = new Set<string>(); // Data in memory (may or may not be rendered)
+
+  // Distance settings
   private renderDistance = RENDER_DISTANCE;
   private cacheDistance = CACHE_DISTANCE;
+  private renderBuffer = 2; // Buffer for stopping render
+
   private playerPosition = { x: 0, z: 0 };
   private playerDirection = { x: 0, z: 1 };
 
@@ -25,18 +31,39 @@ export class ChunkManager {
     return `${cx},${cz}`;
   }
 
+  setSaveManager(saveManager: SaveManager): void {
+    this.saveManager = saveManager;
+  }
+
+  private async loadChunkFromSave(
+    cx: number,
+    cz: number,
+  ): Promise<Chunk | null> {
+    if (!this.saveManager) return null;
+    try {
+      const data = await this.saveManager.loadChunk(cx, cz);
+      if (data) {
+        const chunk = new Chunk(cx, cz);
+        chunk.data.set(data);
+        return chunk;
+      }
+    } catch (e) {
+      console.error("Failed to load chunk from save:", cx, cz, e);
+    }
+    return null;
+  }
+
   getChunk(cx: number, cz: number): Chunk | undefined {
     return this.chunks.get(this.getChunkKey(cx, cz));
   }
 
-  ensureChunk(cx: number, cz: number): Chunk {
+  private ensureChunk(cx: number, cz: number): Chunk {
     const key = this.getChunkKey(cx, cz);
     let chunk = this.chunks.get(key);
     if (!chunk) {
-      // Create a placeholder chunk and trigger async load
       chunk = new Chunk(cx, cz);
       this.chunks.set(key, chunk);
-      this.loadChunkAsync(cx, cz, chunk);
+      void this.loadChunkAsync(cx, cz, chunk);
     }
     return chunk;
   }
@@ -59,66 +86,40 @@ export class ChunkManager {
     }
   }
 
-  setBlock(x: number, y: number, z: number, type: number): void {
-    if (y < 0 || y >= CHUNK_HEIGHT) return;
-
-    const cx = Math.floor(x / CHUNK_SIZE);
-    const cz = Math.floor(z / CHUNK_SIZE);
-    const localX = x - cx * CHUNK_SIZE;
-    const localZ = z - cz * CHUNK_SIZE;
-
-    const chunk = this.getChunk(cx, cz);
-    if (chunk) {
-      chunk.setBlock(localX, y, localZ, type);
-      this.scheduleSave(cx, cz);
-    }
-
-    // Mark adjacent chunks for update if block is on chunk edge
-    if (localX === 0) {
-      const neighbor = this.getChunk(cx - 1, cz);
-      if (neighbor) neighbor.needsUpdate = true;
-    }
-    if (localX === CHUNK_SIZE - 1) {
-      const neighbor = this.getChunk(cx + 1, cz);
-      if (neighbor) neighbor.needsUpdate = true;
-    }
-    if (localZ === 0) {
-      const neighbor = this.getChunk(cx, cz - 1);
-      if (neighbor) neighbor.needsUpdate = true;
-    }
-    if (localZ === CHUNK_SIZE - 1) {
-      const neighbor = this.getChunk(cx, cz + 1);
-      if (neighbor) neighbor.needsUpdate = true;
-    }
-  }
-
-  getBlock(x: number, y: number, z: number): number {
-    if (y < 0) return 1;
-    if (y >= CHUNK_HEIGHT) return 0;
-
-    const cx = Math.floor(x / CHUNK_SIZE);
-    const cz = Math.floor(z / CHUNK_SIZE);
-    const localX = x - cx * CHUNK_SIZE;
-    const localZ = z - cz * CHUNK_SIZE;
-
-    const chunk = this.getChunk(cx, cz);
-    if (!chunk) return 0;
-    return chunk.getBlock(localX, y, localZ);
-  }
-
-  isSolid(x: number, y: number, z: number): boolean {
-    const block = this.getBlock(x, y, z);
-    return block !== 0;
-  }
-
-  updateVisibleChunks(
+  /**
+   * Core chunk management logic:
+   *
+   * Definitions:
+   * - Render: Chunk has mesh and is in scene (may be in buffer zone, not necessarily visible due to fog)
+   * - Unload: Remove mesh from scene (stop rendering), but data stays in memory
+   * - Cache: Chunk data is in memory (Uint8Array), regardless of rendering state
+   * - Release: Delete chunk data from memory (save to disk first if modified)
+   *
+   * Distance tiers:
+   * - Render Distance: Chunks within this distance SHOULD be rendered
+   * - Cache Distance: Chunks within this distance SHOULD have data in memory
+   * - Render Buffer: Extra distance beyond Render Distance before unloading
+   *                  (prevents flickering when player moves at chunk boundaries)
+   *
+   * State tracking:
+   * - renderedChunks: Chunks that actually have meshes (includes buffer zone)
+   * - cachedChunks: Chunks with data in memory (includes rendered chunks)
+   *
+   * Operations per update:
+   * 1. Start rendering: Chunks entering Render Distance (need new mesh)
+   * 2. Stop rendering: Rendered chunks beyond Render Distance + Buffer
+   * 3. Start caching: Chunks entering Cache Distance (load data, no mesh)
+   * 4. Release memory: Cached chunks beyond Cache Distance (save then delete)
+   */
+  updateChunks(
     playerX: number,
     playerZ: number,
     playerYaw?: number,
   ): {
-    unloaded: string[];
-    cached: string[];
-    uncached: string[];
+    startRendering: string[]; // Chunks entering Render Distance (need new mesh + fade in)
+    stopRendering: string[]; // Chunks beyond Render Distance + Buffer (remove mesh)
+    startCaching: string[]; // Chunks entering Cache Distance (load data, no mesh)
+    releaseMemory: string[]; // Chunks beyond Cache Distance (save then delete)
   } {
     this.playerPosition.x = playerX;
     this.playerPosition.z = playerZ;
@@ -137,13 +138,17 @@ export class ChunkManager {
     const pcx = Math.floor(playerX / CHUNK_SIZE);
     const pcz = Math.floor(playerZ / CHUNK_SIZE);
 
-    const newVisibleChunks = new Set<string>();
-    const newCachedChunks = new Set<string>();
-    const unloadedChunks: string[] = [];
-    const cachedChunks: string[] = [];
-    const uncachedChunks: string[] = [];
+    const startRendering: string[] = [];
+    const stopRendering: string[] = [];
+    const startCaching: string[] = [];
+    const releaseMemory: string[] = [];
 
-    // First pass: determine which chunks should be visible or cached
+    const bufferedRenderDistance = this.renderDistance + this.renderBuffer;
+
+    // Step 1: Calculate which chunks should be in each tier
+    const shouldRender = new Set<string>(); // In Render Distance
+    const shouldCache = new Set<string>(); // In Cache Distance
+
     for (let x = -this.cacheDistance; x <= this.cacheDistance; x++) {
       for (let z = -this.cacheDistance; z <= this.cacheDistance; z++) {
         const cx = pcx + x;
@@ -152,54 +157,84 @@ export class ChunkManager {
         const key = this.getChunkKey(cx, cz);
 
         if (dist <= this.renderDistance) {
-          // Render distance: fully loaded and visible
-          this.ensureChunk(cx, cz);
-          newVisibleChunks.add(key);
+          shouldRender.add(key);
+          shouldCache.add(key);
         } else if (dist <= this.cacheDistance) {
-          // Cache distance: data kept in memory but not rendered
-          this.ensureChunk(cx, cz);
-          newCachedChunks.add(key);
+          shouldCache.add(key);
         }
       }
     }
 
-    // Find chunks that are no longer visible or cached
-    for (const key of this.visibleChunks) {
-      if (!newVisibleChunks.has(key)) {
-        if (newCachedChunks.has(key)) {
-          // Moving from visible to cached - remove mesh but keep data
-          cachedChunks.push(key);
-        } else {
-          // Moving from visible to unloaded
-          this.unloadChunk(key);
-          unloadedChunks.push(key);
-        }
+    // Step 2: Handle currently rendered chunks (including those in buffer zone)
+    for (const key of this.renderedChunks) {
+      const [cx, cz] = key.split(",").map(Number);
+      const dist = this.getDistanceFromPlayer(cx, cz, pcx, pcz);
+
+      // Stop rendering if beyond Render Distance + Buffer
+      if (dist > bufferedRenderDistance) {
+        stopRendering.push(key);
       }
+      // If within buffer (Render Distance < dist <= Render Distance + Buffer),
+      // keep rendering but don't add to startRendering (no fade in needed)
     }
 
-    // Find chunks that are no longer cached
+    // Step 3: Handle currently cached chunks
     for (const key of this.cachedChunks) {
-      if (!newVisibleChunks.has(key) && !newCachedChunks.has(key)) {
-        this.unloadChunk(key);
-        unloadedChunks.push(key);
-      } else if (newVisibleChunks.has(key)) {
-        // Moving from cached back to visible
-        uncachedChunks.push(key);
+      if (!shouldCache.has(key)) {
+        // Beyond Cache Distance - release memory
+        releaseMemory.push(key);
+        this.unloadChunkData(key);
       }
     }
 
-    this.visibleChunks = newVisibleChunks;
-    this.cachedChunks = newCachedChunks;
+    // Step 4: Determine new chunks to render (should render but not currently rendered)
+    for (const key of shouldRender) {
+      if (!this.renderedChunks.has(key)) {
+        const [cx, cz] = key.split(",").map(Number);
+        this.ensureChunk(cx, cz); // Ensure data is loaded
+        startRendering.push(key);
+        this.renderedChunks.add(key); // Add to rendered set immediately
+      }
+    }
+
+    // Step 5: Determine new cached chunks (should cache but not currently cached and not rendered)
+    for (const key of shouldCache) {
+      if (!this.cachedChunks.has(key) && !this.renderedChunks.has(key)) {
+        const [cx, cz] = key.split(",").map(Number);
+        this.ensureChunk(cx, cz); // Ensure data is loaded
+        startCaching.push(key);
+      }
+    }
+
+    // Step 6: Remove from rendered set after processing stopRendering
+    for (const key of stopRendering) {
+      this.renderedChunks.delete(key);
+    }
+
+    // Update state
+    this.cachedChunks = shouldCache;
 
     return {
-      unloaded: unloadedChunks,
-      cached: cachedChunks,
-      uncached: uncachedChunks,
+      startRendering,
+      stopRendering,
+      startCaching,
+      releaseMemory,
     };
   }
 
-  private unloadChunk(key: string): void {
-    // Save chunk before unloading if it has pending changes
+  private getDistanceFromPlayer(
+    cx: number,
+    cz: number,
+    pcx: number,
+    pcz: number,
+  ): number {
+    const dx = cx - pcx;
+    const dz = cz - pcz;
+    return Math.sqrt(dx * dx + dz * dz);
+  }
+
+  private unloadChunkData(key: string): void {
+    // Save chunk before releasing if it has pending changes
     if (this.pendingSaves.has(key)) {
       const chunk = this.chunks.get(key);
       if (chunk && this.saveManager) {
@@ -214,97 +249,64 @@ export class ChunkManager {
       }
       this.pendingSaves.delete(key);
     }
-    // Remove chunk from memory
+    // Remove from memory
     this.chunks.delete(key);
   }
 
-  getVisibleChunks(): IterableIterator<Chunk> {
-    const visible: Chunk[] = [];
-    for (const key of this.visibleChunks) {
-      const chunk = this.chunks.get(key);
-      if (chunk) visible.push(chunk);
+  setBlock(x: number, y: number, z: number, type: number): void {
+    if (y < 0 || y >= CHUNK_HEIGHT) return;
+
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    const localX = x - cx * CHUNK_SIZE;
+    const localZ = z - cz * CHUNK_SIZE;
+
+    const chunk = this.getChunk(cx, cz);
+    if (!chunk) return;
+
+    chunk.setBlock(localX, y, localZ, type);
+    this.scheduleSave(cx, cz);
+
+    // Mark adjacent chunks for update if on edge
+    if (localX === 0) {
+      const neighbor = this.getChunk(cx - 1, cz);
+      if (neighbor) neighbor.needsUpdate = true;
     }
-    return visible[Symbol.iterator]();
-  }
-
-  getCachedChunks(): IterableIterator<Chunk> {
-    const cached: Chunk[] = [];
-    for (const key of this.cachedChunks) {
-      const chunk = this.chunks.get(key);
-      if (chunk) cached.push(chunk);
+    if (localX === CHUNK_SIZE - 1) {
+      const neighbor = this.getChunk(cx + 1, cz);
+      if (neighbor) neighbor.needsUpdate = true;
     }
-    return cached[Symbol.iterator]();
-  }
-
-  getAllChunks(): IterableIterator<Chunk> {
-    return this.chunks.values();
-  }
-
-  setSaveManager(saveManager: SaveManager): void {
-    this.saveManager = saveManager;
-  }
-
-  private async loadChunkFromSave(
-    cx: number,
-    cz: number,
-  ): Promise<Chunk | undefined> {
-    if (!this.saveManager) return undefined;
-
-    try {
-      const data = await this.saveManager.loadChunk(cx, cz);
-      if (data) {
-        const chunk = new Chunk(cx, cz);
-        chunk.data.set(data);
-        chunk.needsUpdate = true;
-        return chunk;
-      }
-    } catch (e) {
-      console.error("Failed to load chunk:", cx, cz, e);
+    if (localZ === 0) {
+      const neighbor = this.getChunk(cx, cz - 1);
+      if (neighbor) neighbor.needsUpdate = true;
     }
-    return undefined;
-  }
-
-  async ensureChunkAsync(cx: number, cz: number): Promise<Chunk> {
-    const key = this.getChunkKey(cx, cz);
-    let chunk = this.chunks.get(key);
-
-    if (!chunk) {
-      chunk = await this.loadChunkFromSave(cx, cz);
-
-      if (!chunk) {
-        chunk = new Chunk(cx, cz);
-        await this.workerManager.generateChunk(cx, cz, chunk);
-      }
-
-      this.chunks.set(key, chunk);
+    if (localZ === CHUNK_SIZE - 1) {
+      const neighbor = this.getChunk(cx, cz + 1);
+      if (neighbor) neighbor.needsUpdate = true;
     }
-
-    return chunk;
   }
 
   private scheduleSave(cx: number, cz: number): void {
-    if (!this.saveManager) return;
+    const key = this.getChunkKey(cx, cz);
+    this.pendingSaves.add(key);
 
-    this.pendingSaves.add(this.getChunkKey(cx, cz));
-
-    if (this.saveTimeout) {
+    if (this.saveTimeout !== null) {
       clearTimeout(this.saveTimeout);
     }
 
     this.saveTimeout = window.setTimeout(() => {
-      this.flushPendingSaves();
-    }, 5000); // Auto-save after 5 seconds of inactivity
+      void this.flushPendingSaves();
+    }, 5000);
   }
 
   private async flushPendingSaves(): Promise<void> {
     if (!this.saveManager) return;
 
-    const promises: Promise<void>[] = [];
-
+    const saves: Promise<void>[] = [];
     for (const key of this.pendingSaves) {
       const chunk = this.chunks.get(key);
       if (chunk) {
-        promises.push(
+        saves.push(
           this.saveManager
             .saveChunk(chunk.x, chunk.z, chunk.data)
             .catch((e) => {
@@ -313,28 +315,72 @@ export class ChunkManager {
         );
       }
     }
-
     this.pendingSaves.clear();
-    await Promise.all(promises);
+    await Promise.all(saves);
   }
 
   async saveAll(): Promise<void> {
     await this.flushPendingSaves();
   }
 
-  clear(): void {
-    this.chunks.clear();
-    this.visibleChunks.clear();
-    this.cachedChunks.clear();
-    this.workerManager.terminate();
+  getBlock(x: number, y: number, z: number): number {
+    const cx = Math.floor(x / CHUNK_SIZE);
+    const cz = Math.floor(z / CHUNK_SIZE);
+    const localX = x - cx * CHUNK_SIZE;
+    const localZ = z - cz * CHUNK_SIZE;
+
+    const chunk = this.getChunk(cx, cz);
+    if (!chunk) return 0;
+    return chunk.getBlock(localX, y, localZ);
   }
 
-  dispose(): void {
-    this.clear();
-    if (this.saveTimeout) {
+  isSolid(x: number, y: number, z: number): boolean {
+    const block = this.getBlock(x, y, z);
+    return block !== 0;
+  }
+
+  hasPendingChunks(): boolean {
+    return this.workerManager.getPendingCount() > 0;
+  }
+
+  getVisibleChunks(): Iterable<Chunk> {
+    const result: Chunk[] = [];
+    for (const key of this.renderedChunks) {
+      const chunk = this.chunks.get(key);
+      if (chunk) result.push(chunk);
+    }
+    return result;
+  }
+
+  getRenderDistance(): number {
+    return this.renderDistance;
+  }
+
+  setRenderDistance(distance: number): void {
+    this.renderDistance = Math.max(1, distance);
+    // Cache distance should always be >= render distance
+    this.cacheDistance = Math.max(this.cacheDistance, this.renderDistance + 2);
+  }
+
+  setCacheDistance(distance: number): void {
+    this.cacheDistance = Math.max(this.renderDistance + 2, distance);
+  }
+
+  clear(): void {
+    this.chunks.clear();
+    this.renderedChunks.clear();
+    this.cachedChunks.clear();
+    this.pendingSaves.clear();
+    if (this.saveTimeout !== null) {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
+  }
+
+  dispose(): void {
+    void this.saveAll();
+    this.clear();
+    this.workerManager.terminate();
   }
 
   async loadPlayerPosition(): Promise<{
@@ -346,7 +392,10 @@ export class ChunkManager {
     return this.saveManager.loadPlayerPosition();
   }
 
-  async loadPlayerRotation(): Promise<{ x: number; y: number } | null> {
+  async loadPlayerRotation(): Promise<{
+    x: number;
+    y: number;
+  } | null> {
     if (!this.saveManager) return null;
     const metadata = await this.saveManager.loadWorldMetadata();
     return metadata?.playerRotation ?? null;
@@ -358,14 +407,5 @@ export class ChunkManager {
   ): Promise<void> {
     if (!this.saveManager) return;
     await this.saveManager.savePlayerPosition(position, rotation);
-  }
-
-  setRenderDistance(distance: number): void {
-    this.renderDistance = Math.max(1, distance);
-    this.cacheDistance = this.renderDistance + 2;
-  }
-
-  getRenderDistance(): number {
-    return this.renderDistance;
   }
 }
