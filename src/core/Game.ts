@@ -263,7 +263,8 @@ export class Game {
     this.player.update(delta);
 
     const pos = this.player.getPosition();
-    this.world.update(pos.x, pos.z);
+    const rotation = this.renderer.getCameraRotation();
+    this.world.update(pos.x, pos.z, rotation.y);
 
     this.handleBlockInteraction();
     this.handleHotbarSelection();
@@ -277,10 +278,6 @@ export class Game {
       this.fpsLastTime = now;
     }
 
-    // Get camera rotation for display
-    const rotation = this.renderer.getCameraRotation();
-
-    // Get raycast target for display
     const raycastHit = this.raycast();
 
     this.ui.updateDebugInfo({
@@ -292,9 +289,7 @@ export class Game {
       sprinting: this.player.isSprinting(),
     });
 
-    // Auto-save player position and rotation
     if (now - this.lastSaveTime > this.saveInterval) {
-      const rotation = this.renderer.getCameraRotation();
       this.world.getChunkManager().savePlayerPosition(pos, rotation);
       this.lastSaveTime = now;
     }
