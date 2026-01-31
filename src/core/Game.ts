@@ -19,6 +19,19 @@ import {
   PLAYER_WIDTH,
   PLAYER_DEPTH,
   PLAYER_HEIGHT,
+  MS_PER_SECOND,
+  FPS_UPDATE_INTERVAL,
+  MOUSE_SENSITIVITY_FACTOR,
+  LOADING_PROGRESS_INIT,
+  LOADING_PROGRESS_SAVE,
+  LOADING_PROGRESS_ICONS,
+  LOADING_PROGRESS_CHUNKS,
+  LOADING_PROGRESS_COMPLETE,
+  CHUNK_LOAD_TIMEOUT,
+  CHUNK_LOAD_CHECK_INTERVAL,
+  CHUNK_LOAD_DELAY,
+  MAX_DELTA_TIME,
+  FACE_OFFSETS,
 } from "../utils/Constants";
 import { GameSettings, settings } from "../utils/Settings";
 
@@ -87,10 +100,10 @@ export class Game {
   }
 
   async initialize(worldName?: string): Promise<void> {
-    this.updateLoadingStatus("Initializing world...", 0);
+    this.updateLoadingStatus("Initializing world...", LOADING_PROGRESS_INIT);
     await this.world.initialize();
 
-    this.updateLoadingStatus("Loading save data...", 20);
+    this.updateLoadingStatus("Loading save data...", LOADING_PROGRESS_SAVE);
     // Initialize save manager
     this.saveManager = new SaveManager();
     await this.saveManager.init();
@@ -121,7 +134,10 @@ export class Game {
       this.renderer.setCameraRotation(savedRotation.x, savedRotation.y);
     }
 
-    this.updateLoadingStatus("Generating block icons...", 40);
+    this.updateLoadingStatus(
+      "Generating block icons...",
+      LOADING_PROGRESS_ICONS,
+    );
     // Initialize block icon renderer and generate icons
     this.blockIconRenderer = new BlockIconRenderer(
       this.world.getTextureLoader(),
@@ -152,7 +168,7 @@ export class Game {
     };
     await this.loadInitialChunks(playerPos.x, playerPos.z);
 
-    this.updateLoadingStatus("Starting game...", 100);
+    this.updateLoadingStatus("Starting game...", LOADING_PROGRESS_COMPLETE);
 
     // Loading screen is managed by main.ts for initial load
     // World loading overlay would be handled separately
@@ -180,14 +196,14 @@ export class Game {
     playerX: number,
     playerZ: number,
   ): Promise<void> {
-    this.updateLoadingStatus("Loading chunks...", 60);
+    this.updateLoadingStatus("Loading chunks...", LOADING_PROGRESS_CHUNKS);
 
     // Trigger chunk loading
     this.world.update(playerX, playerZ);
 
     // Wait for all visible chunks to be fully loaded
     const chunkManager = this.world.getChunkManager();
-    const maxWaitTime = 30000; // 30 seconds timeout
+    const maxWaitTime = CHUNK_LOAD_TIMEOUT;
     const startTime = performance.now();
 
     while (performance.now() - startTime < maxWaitTime) {
@@ -195,7 +211,7 @@ export class Game {
       const totalChunks = visibleChunks.length;
 
       if (totalChunks === 0) {
-        await this.delay(100);
+        await this.delay(CHUNK_LOAD_CHECK_INTERVAL);
         continue;
       }
 
@@ -209,7 +225,8 @@ export class Game {
         return false;
       }).length;
 
-      const progress = 60 + Math.floor((loadedChunks / totalChunks) * 35);
+      const progress =
+        LOADING_PROGRESS_CHUNKS + Math.floor((loadedChunks / totalChunks) * 35);
       this.updateLoadingStatus(
         `Loading chunks... (${loadedChunks}/${totalChunks})`,
         progress,
@@ -217,11 +234,11 @@ export class Game {
 
       if (loadedChunks >= totalChunks) {
         // All chunks loaded, give a moment for mesh generation
-        await this.delay(500);
+        await this.delay(CHUNK_LOAD_DELAY);
         break;
       }
 
-      await this.delay(100);
+      await this.delay(CHUNK_LOAD_CHECK_INTERVAL);
       // Continue updating world to trigger async loading
       this.world.update(playerX, playerZ);
     }
@@ -244,7 +261,10 @@ export class Game {
   private loop(currentTime: number): void {
     if (!this.running) return;
 
-    const delta = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+    const delta = Math.min(
+      (currentTime - this.lastTime) / MS_PER_SECOND,
+      MAX_DELTA_TIME,
+    );
     this.lastTime = currentTime;
 
     this.update(delta);
@@ -272,7 +292,7 @@ export class Game {
     // Update FPS (once per second)
     this.fpsFrameCount++;
     const now = performance.now();
-    if (now - this.fpsLastTime >= 1000) {
+    if (now - this.fpsLastTime >= FPS_UPDATE_INTERVAL) {
       this.currentFps = this.fpsFrameCount;
       this.fpsFrameCount = 0;
       this.fpsLastTime = now;
@@ -384,8 +404,8 @@ export class Game {
     const mouseDelta = this.input.getMouseDelta();
     if (this.input.isLocked() && (mouseDelta.dx !== 0 || mouseDelta.dy !== 0)) {
       this.renderer.rotateCamera(
-        -mouseDelta.dx * 0.002,
-        -mouseDelta.dy * 0.002,
+        -mouseDelta.dx * MOUSE_SENSITIVITY_FACTOR,
+        -mouseDelta.dy * MOUSE_SENSITIVITY_FACTOR,
       );
     }
 
@@ -488,15 +508,7 @@ export class Game {
     z: number,
     face: number,
   ): { x: number; y: number; z: number } {
-    const offsets = [
-      [0, 1, 0],
-      [0, -1, 0],
-      [0, 0, 1],
-      [0, 0, -1],
-      [-1, 0, 0],
-      [1, 0, 0],
-    ];
-    const offset = offsets[face];
+    const offset = FACE_OFFSETS[face];
     return { x: x + offset[0], y: y + offset[1], z: z + offset[2] };
   }
 
