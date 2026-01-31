@@ -1,5 +1,5 @@
 import { Chunk } from "./Chunk";
-import { TerrainGenerator } from "./TerrainGenerator";
+import { WorkerTerrainManager } from "./WorkerTerrainManager";
 import { SaveManager } from "../save/SaveManager";
 import {
   CHUNK_SIZE,
@@ -10,14 +10,16 @@ import {
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
-  private generator = new TerrainGenerator();
+  private workerManager = new WorkerTerrainManager();
   private visibleChunks = new Set<string>();
-  private cachedChunks = new Set<string>(); // Chunks within cache distance but outside render distance
+  private cachedChunks = new Set<string>();
   private saveManager: SaveManager | null = null;
   private pendingSaves = new Set<string>();
   private saveTimeout: number | null = null;
   private renderDistance = RENDER_DISTANCE;
   private cacheDistance = CACHE_DISTANCE;
+  private playerPosition = { x: 0, z: 0 };
+  private playerDirection = { x: 0, z: 1 };
 
   getChunkKey(cx: number, cz: number): string {
     return `${cx},${cz}`;
@@ -46,20 +48,14 @@ export class ChunkManager {
   ): Promise<void> {
     const saved = await this.loadChunkFromSave(cx, cz);
     if (saved) {
-      // Copy saved data to placeholder - only copy available data
-      // This handles migration from older saves with smaller chunk height
       const copyLength = Math.min(saved.data.length, placeholder.data.length);
       placeholder.data.set(saved.data.subarray(0, copyLength));
-      // Fill remaining space with AIR if saved data is smaller
       if (saved.data.length < placeholder.data.length) {
         placeholder.data.fill(0, saved.data.length);
       }
       placeholder.needsUpdate = true;
     } else {
-      // Generate new terrain if no save exists
-      const generated = this.generator.generateChunk(cx, cz);
-      placeholder.data.set(generated.data);
-      placeholder.needsUpdate = true;
+      await this.workerManager.generateChunk(cx, cz, placeholder);
     }
   }
 
@@ -118,11 +114,26 @@ export class ChunkManager {
   updateVisibleChunks(
     playerX: number,
     playerZ: number,
+    playerYaw?: number,
   ): {
     unloaded: string[];
     cached: string[];
     uncached: string[];
   } {
+    this.playerPosition.x = playerX;
+    this.playerPosition.z = playerZ;
+
+    if (playerYaw !== undefined) {
+      const yaw = (playerYaw * Math.PI) / 180;
+      this.playerDirection.x = -Math.sin(yaw);
+      this.playerDirection.z = -Math.cos(yaw);
+    }
+
+    this.workerManager.updatePlayerContext(
+      this.playerPosition,
+      this.playerDirection,
+    );
+
     const pcx = Math.floor(playerX / CHUNK_SIZE);
     const pcz = Math.floor(playerZ / CHUNK_SIZE);
 
@@ -258,12 +269,11 @@ export class ChunkManager {
     let chunk = this.chunks.get(key);
 
     if (!chunk) {
-      // Try to load from save first
       chunk = await this.loadChunkFromSave(cx, cz);
 
       if (!chunk) {
-        // Generate new chunk if not saved
-        chunk = this.generator.generateChunk(cx, cz);
+        chunk = new Chunk(cx, cz);
+        await this.workerManager.generateChunk(cx, cz, chunk);
       }
 
       this.chunks.set(key, chunk);
@@ -316,6 +326,15 @@ export class ChunkManager {
     this.chunks.clear();
     this.visibleChunks.clear();
     this.cachedChunks.clear();
+    this.workerManager.terminate();
+  }
+
+  dispose(): void {
+    this.clear();
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
   }
 
   async loadPlayerPosition(): Promise<{
