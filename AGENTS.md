@@ -33,6 +33,7 @@ src/
 | Save/load           | `src/save/SaveManager.ts`          | IndexedDB, 5s chunk delay, 30s player  |
 | Custom fog shader   | `src/utils/ChunkShaderMaterial.ts` | Distance fog, chunk fade-in            |
 | Block icons         | `src/utils/BlockIconRenderer.ts`   | 48x48 canvas render for hotbar         |
+| Block utilities     | `src/utils/BlockUtils.ts`          | Shared block texture/color functions   |
 | All constants       | `src/utils/Constants.ts`           | Single source of truth                 |
 | Input state         | `src/input/InputHandler.ts`        | Pointer lock, wheel delta              |
 | Raycasting          | `src/player/Physics.ts`            | DDA algorithm, 5 block max             |
@@ -53,6 +54,7 @@ src/
 | UIManager           | class | ui/UIManager.ts              | Menu system, HUD                      |
 | SaveManager         | class | save/SaveManager.ts          | IndexedDB persistence                 |
 | BlockIconRenderer   | class | utils/BlockIconRenderer.ts   | 3D icon generation                    |
+| BlockUtils          | utils | utils/BlockUtils.ts          | Block texture/color helpers           |
 | ChunkShaderMaterial | class | utils/ChunkShaderMaterial.ts | Fog + fade shader                     |
 
 ## Conventions

@@ -8,6 +8,7 @@ Shared resources, constants, shaders, rendering helpers. Cross-cutting concerns.
 | --------------- | ------------------------ | -------------------------------------------- |
 | All constants   | `Constants.ts`           | CHUNK_SIZE, RENDER_DISTANCE, PLAYER_SPEED... |
 | Block faces     | `Constants.ts:45-61`     | TOP/BOTTOM/FRONT/BACK/LEFT/RIGHT indices     |
+| Block utilities | `BlockUtils.ts`          | Shared texture mapping, colors, face data    |
 | Texture loading | `TextureLoader.ts`       | Load atlas, UV mapping per face              |
 | Geometry reuse  | `GeometryCache.ts`       | Shared BoxGeometry, PlaneGeometry            |
 | Hotbar icons    | `BlockIconRenderer.ts`   | 48×48 canvas render, isometric camera        |
@@ -27,6 +28,8 @@ Single source of truth for all game constants:
 - Timings: `BLOCK_BREAK_COOLDOWN=200`, `SAVE_DELAY_CHUNK=5000`
 - Player: `PLAYER_SPRINT_SPEED=6.5`, `PLAYER_FLIGHT_SPEED=8.0`
 - Faces: `BLOCK_FACES.TOP=0`, `FACE_OFFSETS[6]`
+- Loading: `LOADING_PROGRESS_*`, `CHUNK_LOAD_TIMEOUT`
+- Input: `MOUSE_SENSITIVITY_FACTOR=0.002`, `FPS_UPDATE_INTERVAL=1000`
 
 ### TextureLoader.ts
 
@@ -41,12 +44,23 @@ Single source of truth for all game constants:
 - Prevents duplicate geometry creation
 - BoxGeometry for blocks, PlaneGeometry for faces
 
+### BlockUtils.ts
+
+Shared block utilities to eliminate code duplication:
+
+- `getBlockTextureProperties(blockType)` - Centralized texture mapping
+- `FACE_VERTICES` - 6 faces × 4 vertices × 3 coords for mesh building
+- `FACE_DIRECTION_OFFSETS` - Adjacent block position offsets
+- `BLOCK_COLORS` / `getBlockColor()` - CSS colors for UI fallback
+- Used by: MeshBuilder, BlockIconRenderer, UIManager
+
 ### BlockIconRenderer.ts
 
 - Renders 3D block icons for hotbar
 - Offscreen canvas: 48×48 pixels
 - Isometric camera angle (2,2,2 looking at origin)
 - Returns PNG data URLs
+- Uses `getBlockTextureProperties()` from BlockUtils
 
 ### Settings.ts
 

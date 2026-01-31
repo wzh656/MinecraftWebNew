@@ -4,18 +4,19 @@ Core orchestration layer. Main game loop, Three.js integration, world coordinati
 
 ## Where To Look
 
-| Task           | File              | Notes                                           |
-| -------------- | ----------------- | ----------------------------------------------- |
-| Game loop      | `Game.ts:244-302` | update() + render(), delta capped 0.1s          |
-| Initialization | `Game.ts:89-177`  | Creates all systems, loads initial chunks       |
-| Pause state    | `Game.ts:554-597` | Menu visibility, pointer lock handling          |
-| Block break    | `Game.ts:456-461` | Raycast, cooldown check, remove block           |
-| Block place    | `Game.ts:463-490` | Adjacent position, collision check, place block |
-| Hotbar input   | `Game.ts:431-454` | Number keys 1-9, mouse wheel delta              |
-| Movement input | `Game.ts:308-401` | WASD, space/shift, flight/sprint toggles        |
-| Auto-save      | `Game.ts:273-277` | Player pos every 30s, chunks 5s delay           |
-| Camera setup   | `Renderer.ts`     | Scene, camera, renderer init                    |
-| Fog settings   | `World.ts`        | Fog color, density, chunk coordination          |
+| Task           | File              | Notes                                            |
+| -------------- | ----------------- | ------------------------------------------------ |
+| Game loop      | `Game.ts:260-318` | update() + render(), delta capped MAX_DELTA_TIME |
+| Initialization | `Game.ts:105-193` | Creates all systems, loads initial chunks        |
+| Pause state    | `Game.ts:570-613` | Menu visibility, pointer lock handling           |
+| Block break    | `Game.ts:472-477` | Raycast, cooldown check, remove block            |
+| Block place    | `Game.ts:479-506` | Adjacent position, collision check, place block  |
+| Hotbar input   | `Game.ts:447-470` | Number keys 1-9, mouse wheel delta               |
+| Movement input | `Game.ts:324-417` | WASD, space/shift, flight/sprint toggles         |
+| Auto-save      | `Game.ts:289-293` | Player pos every 30s, chunks 5s delay            |
+| Loading screen | `Game.ts:193-265` | Progress tracking with LOADING*PROGRESS*\*       |
+| Camera setup   | `Renderer.ts`     | Scene, camera, renderer init                     |
+| Fog settings   | `World.ts`        | Fog color, density, chunk coordination           |
 
 ## Key Classes
 

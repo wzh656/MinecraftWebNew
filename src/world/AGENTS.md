@@ -53,6 +53,7 @@ Chunk storage, terrain generation, mesh building. Core world data layer.
 - Face culling: only render faces adjacent to air
 - Uses custom ChunkShaderMaterial (fog + fade)
 - Creates BufferGeometry with position/uv/color attributes
+- Uses `getBlockTextureProperties()` and `FACE_VERTICES` from BlockUtils
 
 ### BlockType
 
