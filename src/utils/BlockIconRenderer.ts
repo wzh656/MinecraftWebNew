@@ -10,6 +10,7 @@ import {
 } from "three";
 import { BlockType } from "../world/BlockType";
 import { TextureLoader } from "./TextureLoader";
+import { getBlockTextureProperties, FACE_VERTICES } from "./BlockUtils";
 
 export class BlockIconRenderer {
   private canvas: HTMLCanvasElement;
@@ -22,16 +23,12 @@ export class BlockIconRenderer {
   constructor(textureLoader: TextureLoader) {
     this.textureLoader = textureLoader;
 
-    // Create canvas for rendering
     this.canvas = document.createElement("canvas");
     this.canvas.width = 48;
     this.canvas.height = 48;
 
-    // Setup scene
     this.scene = new Scene();
 
-    // Setup orthographic camera for isometric view
-    // frustumSize determines how large the block appears in the icon
     const frustumSize = 1.5;
     this.camera = new OrthographicCamera(
       -frustumSize / 2,
@@ -44,7 +41,6 @@ export class BlockIconRenderer {
     this.camera.position.set(1.8, 1.8, 1.8);
     this.camera.lookAt(0, 0, 0);
 
-    // Setup renderer with transparent background
     this.renderer = new WebGLRenderer({
       canvas: this.canvas,
       alpha: true,
@@ -60,8 +56,6 @@ export class BlockIconRenderer {
       this.material = new MeshBasicMaterial({
         map: texture,
         side: DoubleSide,
-        // 禁用透明混合，防止颜色泛白
-        // 使用alphaTest进行裁剪，保持边缘锐利
         transparent: false,
         alphaTest: 0.5,
       });
@@ -73,21 +67,17 @@ export class BlockIconRenderer {
       return "";
     }
 
-    // Clear scene
     while (this.scene.children.length > 0) {
       this.scene.remove(this.scene.children[0]);
     }
 
-    // Create block mesh
     const geometry = this.createBlockGeometry(blockType);
     const mesh = new Mesh(geometry, this.material);
     mesh.position.set(-0.5, -0.5, -0.5);
     this.scene.add(mesh);
 
-    // Render
     this.renderer.render(this.scene, this.camera);
 
-    // Return data URL
     return this.canvas.toDataURL("image/png");
   }
 
@@ -96,7 +86,7 @@ export class BlockIconRenderer {
     const uvs: number[] = [];
     const indices: number[] = [];
 
-    const props = this.getBlockProperties(blockType);
+    const props = getBlockTextureProperties(blockType);
     let vertexCount = 0;
 
     const addFace = (face: number, textureIndex: number): void => {
@@ -121,7 +111,6 @@ export class BlockIconRenderer {
       vertexCount += 4;
     };
 
-    // Add all 6 faces
     addFace(0, props.textureTop);
     addFace(1, props.textureBottom);
     addFace(2, props.textureSide);
@@ -141,56 +130,8 @@ export class BlockIconRenderer {
     return geometry;
   }
 
-  private getBlockProperties(blockType: BlockType): {
-    textureTop: number;
-    textureBottom: number;
-    textureSide: number;
-  } {
-    switch (blockType) {
-      case BlockType.STONE:
-        return { textureTop: 7, textureBottom: 7, textureSide: 7 };
-      case BlockType.DIRT:
-        return { textureTop: 5, textureBottom: 5, textureSide: 5 };
-      case BlockType.GRASS:
-        return { textureTop: 3, textureBottom: 5, textureSide: 4 };
-      case BlockType.COBBLESTONE:
-        return { textureTop: 6, textureBottom: 6, textureSide: 6 };
-      case BlockType.PLANKS:
-        return { textureTop: 12, textureBottom: 12, textureSide: 12 };
-      case BlockType.BRICKS:
-        return { textureTop: 13, textureBottom: 13, textureSide: 13 };
-      case BlockType.SAND:
-        return { textureTop: 8, textureBottom: 8, textureSide: 8 };
-      case BlockType.WOOD:
-        return { textureTop: 9, textureBottom: 9, textureSide: 10 };
-      case BlockType.LEAVES:
-        return { textureTop: 11, textureBottom: 11, textureSide: 11 };
-      case BlockType.CACTUS:
-        return { textureTop: 14, textureBottom: 16, textureSide: 15 };
-      case BlockType.COMMAND_BLOCK:
-        return { textureTop: 0, textureBottom: 2, textureSide: 1 };
-      default:
-        return { textureTop: 5, textureBottom: 5, textureSide: 5 };
-    }
-  }
-
   dispose(): void {
     this.renderer.dispose();
     this.material?.dispose();
   }
 }
-
-const FACE_VERTICES = [
-  // Top (y+)
-  [0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1],
-  // Bottom (y-)
-  [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
-  // Front (z+)
-  [0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
-  // Back (z-)
-  [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0],
-  // Left (x-)
-  [0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0],
-  // Right (x+)
-  [1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1],
-];
