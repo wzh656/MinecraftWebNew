@@ -1,5 +1,6 @@
 import { HOTBAR_SIZE, BLOCK_ICON_SIZE } from "../utils/Constants";
 import { settings, GameSettings } from "../utils/Settings";
+import { getBlockColor } from "../utils/BlockUtils";
 
 type MenuType =
   | "main"
@@ -891,7 +892,7 @@ export class UIManager {
       fallback.style.cssText = `
         width: ${iconDisplaySize}px;
         height: ${iconDisplaySize}px;
-        background-color: ${this.getBlockColor(this.blockTypes[i])};
+        background-color: ${getBlockColor(this.blockTypes[i])};
         border: 1px solid #333;
         position: absolute;
         top: 0;
@@ -941,24 +942,6 @@ export class UIManager {
     this.uiLayer!.appendChild(this.debugInfo);
   }
 
-  private getBlockColor(type: number): string {
-    const colors: Record<number, string> = {
-      0: "#000000",
-      1: "#808080",
-      2: "#8B4513",
-      3: "#7CFC00",
-      4: "#666666",
-      5: "#DEB887",
-      6: "#B22222",
-      7: "#F0E68C",
-      8: "#8B5A2B",
-      9: "#228B22",
-      10: "#2E8B57",
-      11: "#FF00FF",
-    };
-    return colors[type] ?? "#888888";
-  }
-
   setBlockTypes(types: number[]): void {
     this.blockTypes = types;
     this.updateBlockIcons();
@@ -990,7 +973,7 @@ export class UIManager {
         } else {
           iconImg.style.display = "none";
           fallback.style.display = "block";
-          fallback.style.backgroundColor = this.getBlockColor(blockType);
+          fallback.style.backgroundColor = getBlockColor(blockType);
         }
       }
     });
