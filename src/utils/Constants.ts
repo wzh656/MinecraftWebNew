@@ -1,5 +1,6 @@
-export const CHUNK_SIZE = 16;
-export const CHUNK_HEIGHT = 256;
+// Re-export world constants from single source of truth
+export { CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL } from "./WorldConstants";
+
 export const BLOCK_SIZE = 1;
 
 export const RENDER_DISTANCE = 8;

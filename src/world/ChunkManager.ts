@@ -2,11 +2,11 @@ import { Chunk } from "./Chunk";
 import { WorkerTerrainManager } from "./WorkerTerrainManager";
 import { SaveManager } from "../save/SaveManager";
 import {
-  CHUNK_SIZE,
-  CHUNK_HEIGHT,
   RENDER_DISTANCE,
   CACHE_DISTANCE,
 } from "../utils/Constants";
+import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/WorldConstants";
+import { getChunkKey } from "../utils/ChunkUtils";
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
@@ -26,10 +26,6 @@ export class ChunkManager {
 
   private playerPosition = { x: 0, z: 0 };
   private playerDirection = { x: 0, z: 1 };
-
-  getChunkKey(cx: number, cz: number): string {
-    return `${cx},${cz}`;
-  }
 
   setSaveManager(saveManager: SaveManager): void {
     this.saveManager = saveManager;
@@ -58,11 +54,11 @@ export class ChunkManager {
   }
 
   getChunk(cx: number, cz: number): Chunk | undefined {
-    return this.chunks.get(this.getChunkKey(cx, cz));
+    return this.chunks.get(getChunkKey(cx, cz));
   }
 
   private ensureChunk(cx: number, cz: number): Chunk {
-    const key = this.getChunkKey(cx, cz);
+    const key = getChunkKey(cx, cz);
     let chunk = this.chunks.get(key);
     if (!chunk) {
       chunk = new Chunk(cx, cz);
@@ -158,7 +154,7 @@ export class ChunkManager {
         const cx = pcx + x;
         const cz = pcz + z;
         const dist = Math.sqrt(x * x + z * z);
-        const key = this.getChunkKey(cx, cz);
+        const key = getChunkKey(cx, cz);
 
         if (dist <= this.renderDistance) {
           shouldRender.add(key);
@@ -291,7 +287,7 @@ export class ChunkManager {
   }
 
   private scheduleSave(cx: number, cz: number): void {
-    const key = this.getChunkKey(cx, cz);
+    const key = getChunkKey(cx, cz);
     this.pendingSaves.add(key);
 
     if (this.saveTimeout !== null) {

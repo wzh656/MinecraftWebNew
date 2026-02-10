@@ -2,7 +2,7 @@
 
 一个基于 TypeScript、Three.js 和 Vite 开发的浏览器版 Minecraft。
 
-<!-- **在线演示**: [在浏览器中打开](https://your-demo-url-here) -->
+**在线演示**: [在浏览器中打开](https://wzh656.github.io/MinecraftWebNew/)
 
 > **注意**: 本项目全部由 **Kimi K2.5** AI 模型通过 Vibe Coding 迭代开发和优化完成。
 

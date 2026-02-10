@@ -7,14 +7,16 @@ import {
 } from "three";
 import { Chunk } from "./Chunk";
 import { ChunkManager } from "./ChunkManager";
-import { TextureLoader } from "../utils/TextureLoader";
+import { TextureLoader } from "../rendering/texture/TextureLoader";
 import {
   ChunkShaderMaterial,
   ChunkFadeManager,
-} from "../utils/ChunkShaderMaterial";
+} from "../rendering/material/ChunkShaderMaterial";
 import { BlockType } from "./BlockType";
-import { CHUNK_SIZE, CHUNK_HEIGHT, FACE_OFFSETS } from "../utils/Constants";
+import { FACE_OFFSETS } from "../utils/Constants";
+import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/WorldConstants";
 import { getBlockTextureProperties, FACE_VERTICES } from "../utils/BlockUtils";
+import { getChunkKey } from "../utils/ChunkUtils";
 
 export class MeshBuilder {
   private chunkMeshes = new Map<string, Mesh>();
@@ -50,12 +52,8 @@ export class MeshBuilder {
     }
   }
 
-  getChunkKey(cx: number, cz: number): string {
-    return `${cx},${cz}`;
-  }
-
   hasChunkMesh(cx: number, cz: number): boolean {
-    const key = this.getChunkKey(cx, cz);
+    const key = getChunkKey(cx, cz);
     return this.chunkMeshes.has(key);
   }
 
@@ -64,7 +62,7 @@ export class MeshBuilder {
     scene: Scene,
     chunkManager: ChunkManager,
   ): Mesh | null {
-    const key = this.getChunkKey(chunk.x, chunk.z);
+    const key = getChunkKey(chunk.x, chunk.z);
 
     const oldMesh = this.chunkMeshes.get(key);
     if (oldMesh) {

@@ -1,7 +1,7 @@
 import { Scene, Color } from "three";
 import { ChunkManager } from "../world/ChunkManager";
 import { MeshBuilder } from "../world/MeshBuilder";
-import { TextureLoader } from "../utils/TextureLoader";
+import { TextureLoader } from "../rendering/texture/TextureLoader";
 import { RENDER_DISTANCE, CHUNK_SIZE } from "../utils/Constants";
 import { Chunk } from "../world/Chunk";
 

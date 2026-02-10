@@ -50,6 +50,7 @@ function setupUICallbacks(): void {
     // 主页
     onSinglePlayer: async () => {
       await updateWorldList();
+      ui.showWorldList();
     },
     onOptions: () => {
       // 显示选项菜单

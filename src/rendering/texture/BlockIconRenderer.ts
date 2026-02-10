@@ -8,9 +8,9 @@ import {
   MeshBasicMaterial,
   DoubleSide,
 } from "three";
-import { BlockType } from "../world/BlockType";
+import { BlockType } from "../../world/BlockType";
 import { TextureLoader } from "./TextureLoader";
-import { getBlockTextureProperties, FACE_VERTICES } from "./BlockUtils";
+import { getBlockTextureProperties, FACE_VERTICES } from "../../utils/BlockUtils";
 
 export class BlockIconRenderer {
   private canvas: HTMLCanvasElement;
