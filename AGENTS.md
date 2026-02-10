@@ -98,6 +98,38 @@ src/
 - NEVER forget cross-chunk updates on edge blocks
 - NEVER store derived state - always compute from chunks
 
+## Git Branch Naming Conventions
+
+Examples:
+
+```
+main                      # Production branch, stable releases
+refactor/structure        # Refactoring / structural changes
+refactor/player-physics   # Refactoring / player physics
+feat/block-placement      # New feature / block placement
+feat/terrain-gen          # New feature / terrain generation
+fix/chunk-render          # Bug fix / chunk rendering
+fix/memory-leak           # Bug fix / memory leak
+docs/api-reference        # Documentation / API reference
+```
+
+### Branch Prefixes
+
+| Prefix | Purpose | Example |
+|--------|---------|---------|
+| `main` | Production branch, deployable | - |
+| `feat/` | New feature development | `feat/save-system` |
+| `refactor/` | Code refactoring, architecture changes | `refactor/chunk-manager` |
+| `fix/` | Bug fixes | `fix/cross-chunk-mesh` |
+| `docs/` | Documentation updates | `docs/readme` |
+
+### Workflow
+
+1. Create feature branch from `main`
+2. Use kebab-case for branch names (lowercase with hyphens)
+3. Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+4. Merge back to `main` when complete
+
 ## Commands
 
 ```bash
