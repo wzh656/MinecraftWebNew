@@ -4,7 +4,7 @@ export class TextureLoader {
   private textureAtlas: Texture | null = null;
   private textureSize = 16;
   private atlasWidth = 128;
-  private atlasHeight = 64;
+  private atlasHeight = 80;
   private cols = 8;
 
   async load(url: string): Promise<Texture> {

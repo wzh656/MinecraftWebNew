@@ -105,7 +105,7 @@ async function updateWorldList(): Promise<void> {
   currentGame?.getUIManager().updateWorldList(worlds);
 }
 
-async function createNewWorld(worldName: string, _seed: string): Promise<void> {
+async function createNewWorld(worldName: string, seed: string): Promise<void> {
   if (!saveManager) return;
 
   // 检查世界是否已存在
@@ -115,6 +115,11 @@ async function createNewWorld(worldName: string, _seed: string): Promise<void> {
     return;
   }
 
+  // 如果种子为空，生成随机种子
+  const finalSeed = seed.trim() || Math.random().toString(36).substring(2);
+
+  // 创建世界（保存种子）
+  await saveManager.createWorld(worldName, finalSeed);
   saveManager.setCurrentWorld(worldName);
   await saveManager.savePlayerPosition({ x: 8, y: 255, z: 8 });
 

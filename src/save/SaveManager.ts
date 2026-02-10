@@ -14,6 +14,7 @@ interface WorldMetadata {
   name: string;
   createdAt: number;
   lastPlayed: number;
+  seed: string;
   playerPosition?: { x: number; y: number; z: number };
   playerRotation?: { x: number; y: number };
 }
@@ -121,25 +122,48 @@ export class SaveManager {
     });
   }
 
+  async createWorld(worldName: string, seed: string): Promise<void> {
+    if (!this.db) throw new Error("Database not initialized");
+
+    const metadata: WorldMetadata = {
+      name: worldName,
+      createdAt: Date.now(),
+      lastPlayed: Date.now(),
+      seed,
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([META_STORE], "readwrite");
+      const store = transaction.objectStore(META_STORE);
+      const request = store.put(metadata);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async savePlayerPosition(
     position: { x: number; y: number; z: number },
     rotation?: { x: number; y: number },
   ): Promise<void> {
     if (!this.db) throw new Error("Database not initialized");
 
+    // Get existing metadata first to preserve createdAt and seed
+    const existing = await this.getWorldMetadata(this.currentWorld);
+
+    // If no existing metadata, we can't save position
+    if (!existing) {
+      throw new Error(`World "${this.currentWorld}" does not exist`);
+    }
+
     const metadata: WorldMetadata = {
       name: this.currentWorld,
-      createdAt: Date.now(),
+      createdAt: existing.createdAt,
       lastPlayed: Date.now(),
+      seed: existing.seed,
       playerPosition: position,
       playerRotation: rotation,
     };
-
-    // Get existing metadata first to preserve createdAt
-    const existing = await this.getWorldMetadata(this.currentWorld);
-    if (existing) {
-      metadata.createdAt = existing.createdAt;
-    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([META_STORE], "readwrite");

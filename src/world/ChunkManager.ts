@@ -35,6 +35,10 @@ export class ChunkManager {
     this.saveManager = saveManager;
   }
 
+  async initializeTerrain(seed: string): Promise<void> {
+    await this.workerManager.initialize(seed);
+  }
+
   private async loadChunkFromSave(
     cx: number,
     cz: number,

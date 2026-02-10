@@ -1,4 +1,5 @@
-import { BlockType } from "../world/BlockType";
+import { BlockType, BLOCK_PROPERTIES } from "../world/BlockType";
+import { FACE_OFFSETS } from "../utils/Constants";
 
 /**
  * 方块纹理属性
@@ -12,37 +13,22 @@ export interface BlockTextureProps {
 
 /**
  * 获取方块纹理属性
- * 集中管理所有方块的纹理映射，避免在多个地方重复定义
+ * 从 BLOCK_PROPERTIES 派生，避免数据重复定义
+ * 面的顺序: 上(0)、下(1)、前(2)、后(3)、左(4)、右(5)
  */
 export function getBlockTextureProperties(
   blockType: BlockType,
 ): BlockTextureProps {
-  switch (blockType) {
-    case BlockType.STONE:
-      return { textureTop: 7, textureBottom: 7, textureSide: 7 };
-    case BlockType.DIRT:
-      return { textureTop: 5, textureBottom: 5, textureSide: 5 };
-    case BlockType.GRASS:
-      return { textureTop: 3, textureBottom: 5, textureSide: 4 };
-    case BlockType.COBBLESTONE:
-      return { textureTop: 6, textureBottom: 6, textureSide: 6 };
-    case BlockType.PLANKS:
-      return { textureTop: 12, textureBottom: 12, textureSide: 12 };
-    case BlockType.BRICKS:
-      return { textureTop: 13, textureBottom: 13, textureSide: 13 };
-    case BlockType.SAND:
-      return { textureTop: 8, textureBottom: 8, textureSide: 8 };
-    case BlockType.WOOD:
-      return { textureTop: 9, textureBottom: 9, textureSide: 10 };
-    case BlockType.LEAVES:
-      return { textureTop: 11, textureBottom: 11, textureSide: 11 };
-    case BlockType.CACTUS:
-      return { textureTop: 14, textureBottom: 16, textureSide: 15 };
-    case BlockType.COMMAND_BLOCK:
-      return { textureTop: 0, textureBottom: 2, textureSide: 1 };
-    default:
-      return { textureTop: 5, textureBottom: 5, textureSide: 5 };
-  }
+  const props = BLOCK_PROPERTIES[blockType];
+  // if (!props) {
+  //   return { textureTop: 5, textureBottom: 5, textureSide: 5 };
+  // }
+  const indices = props.textureIndices;
+  return {
+    textureTop: indices[0],
+    textureBottom: indices[1],
+    textureSide: indices[2], // 前/后/左/右使用相同的侧面纹理
+  };
 }
 
 /**
@@ -66,19 +52,6 @@ export const FACE_VERTICES: readonly number[][] = [
 ] as const;
 
 /**
- * 面方向偏移量
- * 用于计算相邻方块位置，顺序与 BLOCK_FACES 一致
- */
-export const FACE_DIRECTION_OFFSETS: readonly [number, number, number][] = [
-  [0, 1, 0], // TOP
-  [0, -1, 0], // BOTTOM
-  [0, 0, 1], // FRONT
-  [0, 0, -1], // BACK
-  [-1, 0, 0], // LEFT
-  [1, 0, 0], // RIGHT
-] as const;
-
-/**
  * 根据面索引获取相邻方块坐标
  * @param x 当前方块X坐标
  * @param y 当前方块Y坐标
@@ -92,7 +65,7 @@ export function getAdjacentBlockPosition(
   z: number,
   face: number,
 ): { x: number; y: number; z: number } {
-  const offset = FACE_DIRECTION_OFFSETS[face];
+  const offset = FACE_OFFSETS[face];
   return {
     x: x + offset[0],
     y: y + offset[1],

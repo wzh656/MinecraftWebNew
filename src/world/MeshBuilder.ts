@@ -13,12 +13,8 @@ import {
   ChunkFadeManager,
 } from "../utils/ChunkShaderMaterial";
 import { BlockType } from "./BlockType";
-import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/Constants";
-import {
-  getBlockTextureProperties,
-  FACE_VERTICES,
-  FACE_DIRECTION_OFFSETS,
-} from "../utils/BlockUtils";
+import { CHUNK_SIZE, CHUNK_HEIGHT, FACE_OFFSETS } from "../utils/Constants";
+import { getBlockTextureProperties, FACE_VERTICES } from "../utils/BlockUtils";
 
 export class MeshBuilder {
   private chunkMeshes = new Map<string, Mesh>();
@@ -255,7 +251,7 @@ export class MeshBuilder {
     z: number,
     face: number,
   ): boolean {
-    const offset = FACE_DIRECTION_OFFSETS[face];
+    const offset = FACE_OFFSETS[face];
     const nx = x + offset[0];
     const ny = y + offset[1];
     const nz = z + offset[2];

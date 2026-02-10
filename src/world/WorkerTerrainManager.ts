@@ -11,7 +11,7 @@ interface PendingChunk {
 }
 
 interface WorkerResponse {
-  type: "CHUNK_READY" | "ERROR";
+  type: "CHUNK_READY" | "ERROR" | "INIT_READY";
   cx: number;
   cz: number;
   data?: Uint8Array;
@@ -27,6 +27,8 @@ export class WorkerTerrainManager {
   private activeGenerations = 0;
   private playerPosition = { x: 0, z: 0 };
   private playerDirection = { x: 0, z: 0 };
+  private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     this.worker = new Worker(new URL("./terrain.worker.ts", import.meta.url), {
@@ -38,6 +40,42 @@ export class WorkerTerrainManager {
     this.worker.onerror = (err) => {
       console.error("Terrain worker error:", err);
     };
+  }
+
+  initialize(seed: string): Promise<void> {
+    if (this.initialized) {
+      return Promise.resolve();
+    }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Worker initialization timeout"));
+      }, 5000);
+
+      const onInitMessage = (e: MessageEvent<WorkerResponse>) => {
+        if (e.data.type === "INIT_READY") {
+          clearTimeout(timeout);
+          this.initialized = true;
+          this.worker.removeEventListener("message", onInitMessage);
+          resolve();
+        } else if (e.data.type === "ERROR" && e.data.cx === 0 && e.data.cz === 0) {
+          clearTimeout(timeout);
+          this.worker.removeEventListener("message", onInitMessage);
+          reject(new Error(e.data.error || "Worker initialization failed"));
+        }
+      };
+
+      this.worker.addEventListener("message", onInitMessage);
+      this.worker.postMessage({
+        type: "INIT_GENERATOR",
+        seed,
+      });
+    });
+
+    return this.initPromise;
   }
 
   private handleWorkerMessage(response: WorkerResponse): void {
@@ -91,7 +129,12 @@ export class WorkerTerrainManager {
     return distance - directionBonus;
   }
 
-  generateChunk(cx: number, cz: number, placeholder: Chunk): Promise<void> {
+  async generateChunk(cx: number, cz: number, placeholder: Chunk): Promise<void> {
+    // Wait for initialization
+    if (!this.initialized) {
+      throw new Error("WorkerTerrainManager not initialized with seed");
+    }
+
     const key = `${cx},${cz}`;
 
     if (this.pendingChunks.has(key)) {

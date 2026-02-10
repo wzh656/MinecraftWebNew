@@ -100,7 +100,6 @@ export class Game {
 
   async initialize(worldName?: string): Promise<void> {
     this.updateLoadingStatus("Initializing world...", LOADING_PROGRESS_INIT);
-    await this.world.initialize();
 
     this.updateLoadingStatus("Loading save data...", LOADING_PROGRESS_SAVE);
     // Initialize save manager
@@ -111,6 +110,15 @@ export class Game {
     if (worldName) {
       this.saveManager.setCurrentWorld(worldName);
     }
+
+    // Load world metadata to get seed
+    const worldMetadata = await this.saveManager.loadWorldMetadata();
+    if (!worldMetadata) {
+      throw new Error(`World "${worldName}" metadata not found`);
+    }
+
+    // Initialize world with seed for terrain generation
+    await this.world.initialize(worldMetadata.seed);
 
     this.world.getChunkManager().setSaveManager(this.saveManager);
 
@@ -613,8 +621,17 @@ export class Game {
     // Switch to new world
     this.saveManager.setCurrentWorld(worldName);
 
-    // Clear existing chunks
+    // Load new world metadata to get seed
+    const worldMetadata = await this.saveManager.loadWorldMetadata(worldName);
+    if (!worldMetadata) {
+      throw new Error(`World "${worldName}" metadata not found`);
+    }
+
+    // Clear existing chunks and reinitialize terrain with new seed
     this.world.getChunkManager().clear();
+
+    // Reinitialize terrain generator with seed
+    await this.world.getChunkManager().initializeTerrain(worldMetadata.seed);
 
     // Reload player position
     const savedPosition = await this.world

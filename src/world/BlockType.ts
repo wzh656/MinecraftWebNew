@@ -12,8 +12,9 @@ export enum BlockType {
   CACTUS = 10,
   COMMAND_BLOCK = 11,
   SNOW = 12,
-  CRAFTING_TABLE = 13,
-  BEDROCK = 14,
+  WATER = 13,
+  CRAFTING_TABLE = 14,
+  BEDROCK = 15,
 }
 
 interface BlockProperties {
@@ -99,20 +100,26 @@ export const BLOCK_PROPERTIES: Record<BlockType, BlockProperties> = {
   [BlockType.SNOW]: {
     name: "snow",
     solid: true,
-    transparent: true,
+    transparent: false,
     textureIndices: [17, 17, 17, 17, 17, 17],
+  },
+  [BlockType.WATER]: {
+    name: "water",
+    solid: false,
+    transparent: true,
+    textureIndices: [18, 18, 19, 19, 19, 19],
   },
   [BlockType.CRAFTING_TABLE]: {
     name: "crafting_table",
     solid: true,
     transparent: false,
-    textureIndices: [18, 18, 18, 18, 18, 18],
+    textureIndices: [20, 20, 20, 20, 20, 20],
   },
   [BlockType.BEDROCK]: {
     name: "bedrock",
     solid: true,
     transparent: false,
-    textureIndices: [19, 19, 19, 19, 19, 19],
+    textureIndices: [21, 21, 21, 21, 21, 21],
   },
 };
 

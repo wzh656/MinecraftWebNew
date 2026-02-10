@@ -27,9 +27,12 @@ export class World {
     this.fogColor = new Color(0x87ceeb);
   }
 
-  async initialize(): Promise<void> {
+  async initialize(seed: string): Promise<void> {
     await this.textureLoader.load("images/textures.png");
     this.meshBuilder.initialize();
+
+    // Initialize terrain generator with seed
+    await this.chunkManager.initializeTerrain(seed);
 
     const renderDistanceBlocks = RENDER_DISTANCE * CHUNK_SIZE;
     const fogNear = renderDistanceBlocks * 0.6;
