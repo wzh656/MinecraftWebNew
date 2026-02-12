@@ -107,7 +107,7 @@ export const BLOCK_PROPERTIES: Record<BlockType, BlockProperties> = {
     name: "water",
     solid: false,
     transparent: true,
-    textureIndices: [18, 18, 19, 19, 19, 19],
+    textureIndices: [18, 18, 18, 18, 18, 18],
   },
   [BlockType.CRAFTING_TABLE]: {
     name: "crafting_table",

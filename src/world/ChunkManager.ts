@@ -7,6 +7,7 @@ import {
 } from "../utils/Constants";
 import { CHUNK_SIZE, CHUNK_HEIGHT } from "../utils/WorldConstants";
 import { getChunkKey } from "../utils/ChunkUtils";
+import { isSolid } from "./BlockType";
 
 export class ChunkManager {
   private chunks = new Map<string, Chunk>();
@@ -336,7 +337,7 @@ export class ChunkManager {
 
   isSolid(x: number, y: number, z: number): boolean {
     const block = this.getBlock(x, y, z);
-    return block !== 0;
+    return isSolid(block);
   }
 
   hasPendingChunks(): boolean {

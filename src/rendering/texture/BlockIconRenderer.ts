@@ -6,7 +6,7 @@ import {
   BufferGeometry,
   BufferAttribute,
   MeshBasicMaterial,
-  DoubleSide,
+  FrontSide,
 } from "three";
 import { BlockType } from "../../world/BlockType";
 import { TextureLoader } from "./TextureLoader";
@@ -55,7 +55,7 @@ export class BlockIconRenderer {
     if (texture) {
       this.material = new MeshBasicMaterial({
         map: texture,
-        side: DoubleSide,
+        side: FrontSide,
         transparent: false,
         alphaTest: 0.5,
       });

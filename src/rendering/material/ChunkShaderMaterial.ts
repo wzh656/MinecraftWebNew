@@ -1,4 +1,4 @@
-import { ShaderMaterial, Texture, Color } from "three";
+import { ShaderMaterial, Texture, Color, DoubleSide } from "three";
 
 /**
  * 区块Shader材质 - 实现原版Minecraft风格的雾效
@@ -97,6 +97,7 @@ export class ChunkShaderMaterial {
       alphaTest: 0.1,
       depthWrite: true,
       depthTest: true,
+      side: DoubleSide,
     });
   }
 
