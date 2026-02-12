@@ -36,7 +36,7 @@ export class MeshBuilder {
     const texture = this.textureLoader.getTexture();
     if (texture) {
       this.shaderMaterial = new ChunkShaderMaterial(texture);
-      // 创建水材质：不写入深度缓冲，单面渲染
+      // 创建水材质：不写入深度缓冲
       const waterMat = this.shaderMaterial.getMaterial().clone();
       waterMat.depthWrite = false;
       waterMat.side = DoubleSide;
@@ -107,6 +107,7 @@ export class MeshBuilder {
       solidMaterial.uniforms.chunkOpacity.value = opacity;
       solidMesh = new Mesh(solidGeometry, solidMaterial);
       solidMesh.position.set(chunk.x * CHUNK_SIZE, 0, chunk.z * CHUNK_SIZE);
+      solidMesh.renderOrder = 0; // 固体先渲染
       scene.add(solidMesh);
       this.chunkMeshes.set(key, solidMesh);
     }
@@ -117,6 +118,7 @@ export class MeshBuilder {
       waterMat.uniforms.chunkOpacity.value = opacity;
       const waterMesh = new Mesh(waterGeometry, waterMat);
       waterMesh.position.set(chunk.x * CHUNK_SIZE, 0, chunk.z * CHUNK_SIZE);
+      waterMesh.renderOrder = 1; // 水后渲染，确保透明效果正确
       scene.add(waterMesh);
       this.waterMeshes.set(key, waterMesh);
     }
@@ -185,15 +187,15 @@ export class MeshBuilder {
     let waterVertexCount = 0;
 
     // 微小偏移量，用于避免相邻方块面的z-fighting
-    const FACE_EPSILON = 0.001;
-    const SOLID_SHIFTS = [
-      [0, FACE_EPSILON, 0], // 0: 顶面 (y+)
-      [0, -FACE_EPSILON, 0], // 1: 底面 (y-)
-      [0, 0, FACE_EPSILON], // 2: 前面 (z+)
-      [0, 0, -FACE_EPSILON], // 3: 后面 (z-)
-      [-FACE_EPSILON, 0, 0], // 4: 左面 (x-)
-      [FACE_EPSILON, 0, 0], // 5: 右面 (x+)
-    ] as const;
+    // const FACE_EPSILON = 0.001;
+    // const SOLID_SHIFTS = [
+    //   [0, FACE_EPSILON, 0], // 0: 顶面 (y+)
+    //   [0, -FACE_EPSILON, 0], // 1: 底面 (y-)
+    //   [0, 0, FACE_EPSILON], // 2: 前面 (z+)
+    //   [0, 0, -FACE_EPSILON], // 3: 后面 (z-)
+    //   [-FACE_EPSILON, 0, 0], // 4: 左面 (x-)
+    //   [FACE_EPSILON, 0, 0], // 5: 右面 (x+)
+    // ] as const;
 
     const addSolidFace = (
       x: number,
@@ -204,13 +206,12 @@ export class MeshBuilder {
     ): void => {
       const { u1, v1, u2, v2 } = this.textureLoader.getUVs(textureIndex);
       const verts = FACE_VERTICES[face];
-      const shift = SOLID_SHIFTS[face];
 
       for (let i = 0; i < 4; i++) {
         solidPositions.push(
-          x + verts[i * 3] + shift[0],
-          y + verts[i * 3 + 1] + shift[1],
-          z + verts[i * 3 + 2] + shift[2],
+          x + verts[i * 3],
+          y + verts[i * 3 + 1],
+          z + verts[i * 3 + 2],
         );
       }
 
@@ -235,13 +236,12 @@ export class MeshBuilder {
     ): void => {
       const { u1, v1, u2, v2 } = this.textureLoader.getUVs(textureIndex);
       const verts = FACE_VERTICES[face];
-      const shift = SOLID_SHIFTS[face];
 
       for (let i = 0; i < 4; i++) {
         waterPositions.push(
-          x + verts[i * 3] + shift[0],
-          y + verts[i * 3 + 1] + shift[1],
-          z + verts[i * 3 + 2] + shift[2],
+          x + verts[i * 3],
+          y + verts[i * 3 + 1],
+          z + verts[i * 3 + 2],
         );
       }
 
