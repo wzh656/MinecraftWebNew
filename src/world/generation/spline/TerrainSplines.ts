@@ -53,9 +53,10 @@ export const EROSION_SQUASH_TABLE: ControlPoint[] = [
 // Cave height attenuation table (y -> threshold offset)
 // Higher elevations have higher thresholds (harder to form caves)
 export const CAVE_HEIGHT_ATTENUATION_TABLE: ControlPoint[] = [
-  { input: 0, output: -0.2 }, // y=0, threshold lowered (easier to form caves)
-  { input: 40, output: 0 }, // y=40, standard threshold
-  { input: 80, output: 0.3 }, // y=80, threshold raised
-  { input: 120, output: 0.8 }, // y=120, hard to form caves
+  // { input: 0, output: -0.2 }, // y=0, threshold lowered (easier to form caves)
+  { input: 0, output: 0 }, // y=40, standard threshold
+  { input: 40, output: 0 }, // y=80, threshold raised
+  { input: 60, output: 0.65 }, // y=80, threshold raised
+  { input: 80, output: 0.8 }, // y=120, hard to form caves
   { input: 200, output: 2.0 }, // y=200, almost impossible to have caves
 ];

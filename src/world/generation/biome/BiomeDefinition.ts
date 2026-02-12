@@ -1,5 +1,5 @@
 import { BlockType } from "../../BlockType";
-import type { BiomeType } from "./BiomeType";
+import { BiomeType } from "./BiomeType";
 
 export interface BiomeDefinition {
   type: BiomeType;
@@ -14,7 +14,7 @@ export interface BiomeDefinition {
 
 export const BIOME_DEFINITIONS: BiomeDefinition[] = [
   {
-    type: 1, // DEEP_OCEAN
+    type: BiomeType.DEEP_OCEAN, // DEEP_OCEAN
     name: "deep_ocean",
     center: [-0.8, 0.5, 0.0, 0.5, 0.5],
     surfaceBlock: BlockType.SAND,
@@ -24,17 +24,17 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: -1,
   },
   {
-    type: 0, // OCEAN
+    type: BiomeType.OCEAN, // OCEAN
     name: "ocean",
     center: [-0.5, 0.3, 0.0, 0.5, 0.6],
-    surfaceBlock: BlockType.SAND,
-    subSurfaceBlock: BlockType.SAND,
+    surfaceBlock: BlockType.GRASS,
+    subSurfaceBlock: BlockType.DIRT,
     stoneDepth: 3,
     treeDensity: 0,
     snowHeight: -1,
   },
   {
-    type: 2, // PLAINS
+    type: BiomeType.PLAINS, // PLAINS
     name: "plains",
     center: [0.0, 0.6, 0.0, 0.7, 0.5],
     surfaceBlock: BlockType.GRASS,
@@ -44,7 +44,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: -1,
   },
   {
-    type: 3, // FOREST
+    type: BiomeType.FOREST, // FOREST
     name: "forest",
     center: [0.1, 0.4, 0.2, 0.6, 0.7],
     surfaceBlock: BlockType.GRASS,
@@ -54,7 +54,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: -1,
   },
   {
-    type: 4, // DESERT
+    type: BiomeType.DESERT, // DESERT
     name: "desert",
     center: [0.0, 0.3, 0.0, 0.9, 0.1],
     surfaceBlock: BlockType.SAND,
@@ -64,7 +64,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: -1,
   },
   {
-    type: 7, // HILLS
+    type: BiomeType.HILLS, // HILLS
     name: "hills",
     center: [0.2, 0.2, 0.3, 0.6, 0.5],
     surfaceBlock: BlockType.GRASS,
@@ -74,7 +74,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: -1,
   },
   {
-    type: 5, // MOUNTAINS
+    type: BiomeType.MOUNTAINS, // MOUNTAINS
     name: "mountains",
     center: [0.5, -0.3, 0.6, 0.4, 0.4],
     surfaceBlock: BlockType.GRASS,
@@ -84,7 +84,7 @@ export const BIOME_DEFINITIONS: BiomeDefinition[] = [
     snowHeight: 140,
   },
   {
-    type: 6, // SNOWY_MOUNTAINS
+    type: BiomeType.SNOWY_MOUNTAINS, // SNOWY_MOUNTAINS
     name: "snowy_mountains",
     center: [0.5, -0.2, 0.7, 0.1, 0.3],
     surfaceBlock: BlockType.SNOW,

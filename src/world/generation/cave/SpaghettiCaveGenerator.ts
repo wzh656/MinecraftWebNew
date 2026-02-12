@@ -4,7 +4,7 @@ import { SplineInterpolator } from "../spline/SplineInterpolator";
 import { CAVE_HEIGHT_ATTENUATION_TABLE } from "../spline/TerrainSplines";
 
 // Spaghetti cave radius
-const CAVE_SPAGHETTI_RADIUS = 0.08;
+const CAVE_SPAGHETTI_RADIUS = 0.1;
 
 export class SpaghettiCaveGenerator {
   private noise: FractalNoise3D;

@@ -53,7 +53,7 @@ function setupUICallbacks(): void {
       ui.showWorldList();
     },
     onOptions: () => {
-      // 显示选项菜单
+      ui.showMenu("options");
     },
     onExit: () => {
       // 退出游戏 (刷新页面或关闭标签)

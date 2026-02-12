@@ -27,7 +27,7 @@ export class CheeseCaveGenerator {
 
     // Height attenuation: higher elevations have higher thresholds
     const heightAttenuation = this.heightAttenuationSpline.interpolate(worldY);
-    const threshold = CAVE_CHEESE_THRESHOLD + heightAttenuation;
+    const threshold = CAVE_CHEESE_THRESHOLD - heightAttenuation;
 
     return cheeseNoise < threshold;
   }
