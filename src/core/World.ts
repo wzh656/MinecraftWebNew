@@ -18,6 +18,7 @@ export class World {
   private fogColor: Color;
   private meshUpdateQueue: QueuedChunk[] = [];
   private playerPosition = { x: 0, z: 0 };
+  private isInitialLoading = false;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -56,6 +57,10 @@ export class World {
 
   setFogDistance(near: number, far: number): void {
     this.meshBuilder.setFogDistance(near, far);
+  }
+
+  setInitialLoading(loading: boolean): void {
+    this.isInitialLoading = loading;
   }
 
   private calculateChunkDistance(chunk: Chunk): number {
@@ -111,7 +116,7 @@ export class World {
 
     this.queueChunksForUpdate();
 
-    const maxUpdatesPerFrame = 2;
+    const maxUpdatesPerFrame = this.isInitialLoading ? 64 : 2;
     let updatedCount = 0;
 
     while (

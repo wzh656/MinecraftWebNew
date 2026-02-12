@@ -165,6 +165,7 @@ export class Game {
 
   private async loadInitialChunks(playerX: number, playerZ: number): Promise<void> {
     this.updateLoadingStatus("Loading chunks...", LOADING_PROGRESS_CHUNKS);
+    this.world.setInitialLoading(true);
 
     const chunkManager = this.world.getChunkManager();
     const maxWaitTime = CHUNK_LOAD_TIMEOUT;
@@ -195,6 +196,8 @@ export class Game {
 
       await this.delay(CHUNK_LOAD_CHECK_INTERVAL);
     }
+
+    this.world.setInitialLoading(false);
   }
 
   private delay(ms: number): Promise<void> {
