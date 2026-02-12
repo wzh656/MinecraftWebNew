@@ -37,7 +37,7 @@ export class PauseMenu extends MenuBase {
     });
 
     const optionsBtn = this.createMenuButton("选项...", () => {
-      // Handled by UIManager
+      this.callbacks.onOptions?.();
     });
 
     const returnBtn = this.createMenuButton("保存并回到标题画面", () => {

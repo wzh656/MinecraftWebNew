@@ -171,25 +171,27 @@ export class Game {
     const maxWaitTime = CHUNK_LOAD_TIMEOUT;
     const startTime = performance.now();
 
+    // 使用期望渲染的区块数作为总数（基于渲染距离计算，不依赖就绪状态）
+    const expectedTotal = chunkManager.getExpectedRenderChunkCount();
+
     while (performance.now() - startTime < maxWaitTime) {
       this.world.update(playerX, playerZ);
 
+      // 获取实际已就绪并加入渲染的区块数
       const visibleChunks = Array.from(chunkManager.getVisibleChunks());
-      const totalVisible = visibleChunks.length;
-
       let renderedCount = 0;
       for (const chunk of visibleChunks) {
         if (this.world.isChunkRendered(chunk.x, chunk.z)) renderedCount++;
       }
 
       const hasPending = chunkManager.hasPendingChunks();
-      const progress = LOADING_PROGRESS_CHUNKS + Math.floor((renderedCount / totalVisible) * 35);
+      const progress = LOADING_PROGRESS_CHUNKS + Math.floor((renderedCount / expectedTotal) * 35);
       this.updateLoadingStatus(
-        `Loading chunks... (${renderedCount}/${totalVisible} rendered)${hasPending ? " (generating...)" : ""}`,
+        `Loading chunks... (${renderedCount}/${expectedTotal} rendered)${hasPending ? " (generating...)" : ""}`,
         Math.min(progress, LOADING_PROGRESS_COMPLETE - 1)
       );
 
-      if (renderedCount >= totalVisible && !hasPending && totalVisible > 0) {
+      if (renderedCount >= expectedTotal && !hasPending && expectedTotal > 0) {
         await this.delay(CHUNK_LOAD_DELAY);
         break;
       }

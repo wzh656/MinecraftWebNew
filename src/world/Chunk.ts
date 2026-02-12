@@ -6,6 +6,7 @@ export class Chunk {
   public x: number;
   public z: number;
   public needsUpdate = true;
+  public isReady = false; // 数据是否已就绪（从存档加载或Worker生成完成）
 
   constructor(x: number, z: number) {
     this.x = x;
